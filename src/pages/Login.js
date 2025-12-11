@@ -47,37 +47,66 @@ export default function Login() {
   };
 
   return (
-    <Box className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4">
+    <Box 
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(to bottom right, #eff6ff, #e0e7ff, #f3e8ff)',
+        padding: '16px',
+        position: 'relative',
+        zIndex: 1
+      }}
+    >
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
+        style={{ width: '100%', maxWidth: '448px', position: 'relative', zIndex: 2 }}
       >
-        <Card className="shadow-2xl rounded-2xl overflow-hidden">
-          <Box className="bg-gradient-to-r from-blue-600 to-blue-800 p-8 text-center text-white">
+        <Card 
+          sx={{
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            borderRadius: '16px',
+            overflow: 'hidden',
+            position: 'relative',
+            zIndex: 2
+          }}
+        >
+          <Box 
+            sx={{
+              background: 'linear-gradient(to right, #2563eb, #1e40af)',
+              padding: '32px',
+              textAlign: 'center',
+              color: 'white',
+              position: 'relative',
+              zIndex: 1
+            }}
+          >
             <motion.div
               initial={{ y: -20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.2 }}
             >
-              <InventoryIcon className="text-6xl mb-4" />
-              <Typography variant="h4" className="font-bold mb-2">
+              <InventoryIcon sx={{ fontSize: '64px', marginBottom: '16px' }} />
+              <Typography variant="h4" sx={{ fontWeight: 'bold', marginBottom: '8px' }}>
                 Inventory Pro
               </Typography>
-              <Typography variant="body2" className="opacity-90">
+              <Typography variant="body2" sx={{ opacity: 0.9 }}>
                 Sign in to manage your inventory
               </Typography>
             </motion.div>
           </Box>
-          <CardContent className="p-8">
+          <CardContent sx={{ padding: '32px', position: 'relative', zIndex: 1 }}>
             <form onSubmit={handleSubmit}>
               {error && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
+                  style={{ marginBottom: '16px' }}
                 >
-                  <Alert severity="error" className="mb-4">
+                  <Alert severity="error">
                     {error}
                   </Alert>
                 </motion.div>
@@ -87,6 +116,7 @@ export default function Login() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.3 }}
+                style={{ marginBottom: '16px' }}
               >
                 <TextField
                   fullWidth
@@ -94,11 +124,11 @@ export default function Login() {
                   variant="outlined"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="mb-4"
+                  sx={{ marginBottom: '16px' }}
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
-                        <PersonIcon className="text-gray-400" />
+                        <PersonIcon sx={{ color: 'gray' }} />
                       </InputAdornment>
                     ),
                   }}
@@ -109,6 +139,7 @@ export default function Login() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.4 }}
+                style={{ marginBottom: '24px' }}
               >
                 <TextField
                   fullWidth
@@ -117,11 +148,11 @@ export default function Login() {
                   variant="outlined"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="mb-6"
+                  sx={{ marginBottom: '24px' }}
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
-                        <LockIcon className="text-gray-400" />
+                        <LockIcon sx={{ color: 'gray' }} />
                       </InputAdornment>
                     ),
                     endAdornment: (
@@ -150,7 +181,16 @@ export default function Login() {
                   fullWidth
                   variant="contained"
                   size="large"
-                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 py-3 text-base font-semibold shadow-lg"
+                  sx={{
+                    background: 'linear-gradient(to right, #2563eb, #1e40af)',
+                    padding: '12px',
+                    fontSize: '16px',
+                    fontWeight: 600,
+                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                    '&:hover': {
+                      background: 'linear-gradient(to right, #1e40af, #1e3a8a)',
+                    },
+                  }}
                 >
                   Sign In
                 </Button>

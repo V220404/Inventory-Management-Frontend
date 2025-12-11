@@ -72,7 +72,6 @@ export default function POS() {
     const value = e.target.value;
     setBarcodeInput(value);
     
-    // Auto-trigger when Enter is pressed or barcode is complete (assuming 13 digits)
     if (value.length >= 8 && (e.key === 'Enter' || value.length === 13)) {
       handleBarcodeScan(value);
     }
@@ -148,7 +147,6 @@ export default function POS() {
       return;
     }
 
-    // Update product stock
     const updatedProducts = products.map((product) => {
       const cartItem = cart.find((item) => item.id === product.id);
       if (cartItem) {
@@ -160,11 +158,9 @@ export default function POS() {
       return product;
     });
 
-    // Save updated products
     localStorage.setItem('products', JSON.stringify(updatedProducts));
     loadProducts();
 
-    // Create transaction
     const transaction = {
       id: `TXN-${Date.now()}`,
       items: cart.map((item) => ({
