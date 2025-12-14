@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import {
   Box,
@@ -24,29 +24,154 @@ import {
   Menu as MenuIcon,
   Dashboard as DashboardIcon,
   Inventory as InventoryIcon,
-  PointOfSale as POSIcon,
   ShoppingCart as ShoppingCartIcon,
   Storage as StorageIcon,
   Assessment as ReportsIcon,
   Logout as LogoutIcon,
   AccountCircle as AccountIcon,
   ArrowUpward as ArrowUpwardIcon,
-  AttachMoney as MoneyIcon,
   Today as TodayIcon,
   CalendarMonth as CalendarMonthIcon,
+  LockReset as LockResetIcon,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 
-const drawerWidth = 280;
+const DRAWER_WIDTH = 280;
 
-const menuItems = [
+const MENU_ITEMS = [
   { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
   { text: 'Products', icon: <InventoryIcon />, path: '/products' },
   { text: 'Point of Sale', icon: <ShoppingCartIcon />, path: '/pos' },
   { text: 'Stock Management', icon: <StorageIcon />, path: '/stock' },
   { text: 'Reports', icon: <ReportsIcon />, path: '/reports' },
 ];
+
+// Reusable User Avatar Component
+const UserAvatar = React.memo(({ user, size = 48 }) => {
+  const isValidImage = user?.profileImage && 
+    user.profileImage !== 'null' && 
+    user.profileImage !== 'undefined';
+
+  const handleImageError = useCallback((e) => {
+    e.target.style.display = 'none';
+  }, []);
+
+  return (
+    <Avatar
+      sx={{
+        width: size,
+        height: size,
+        bgcolor: '#2563eb',
+        fontSize: size === 36 ? '0.875rem' : '1.1rem',
+        border: '2px solid white',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+      }}
+      src={isValidImage ? user.profileImage : null}
+      imgProps={{ onError: handleImageError }}
+    >
+      {!isValidImage && (user?.username?.charAt(0) || 'U').toUpperCase()}
+    </Avatar>
+  );
+});
+
+UserAvatar.displayName = 'UserAvatar';
+
+// Revenue Display Component
+const RevenueDisplay = React.memo(({ dailyRevenue, monthlyRevenue, isSmallScreen }) => {
+  const dailyChip = (
+    <Chip
+      icon={<TodayIcon sx={{ color: '#22c55e !important', fontSize: 16 }} />}
+      label={`$${dailyRevenue.toFixed(0)}`}
+      size="small"
+      sx={{
+        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+        color: '#15803d',
+        fontWeight: 700,
+        fontSize: '0.7rem',
+        height: 24,
+        '& .MuiChip-label': { px: 1 },
+      }}
+    />
+  );
+
+  const monthlyChip = (
+    <Chip
+      icon={<CalendarMonthIcon sx={{ color: '#3b82f6 !important', fontSize: 16 }} />}
+      label={`$${monthlyRevenue.toFixed(0)}`}
+      size="small"
+      sx={{
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        color: '#1d4ed8',
+        fontWeight: 700,
+        fontSize: '0.7rem',
+        height: 24,
+        '& .MuiChip-label': { px: 1 },
+      }}
+    />
+  );
+
+  if (isSmallScreen) {
+    return (
+      <Box sx={{ display: 'flex', gap: 1, mr: 1 }}>
+        {dailyChip}
+        {monthlyChip}
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, ml: { sm: 2 } }}>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          px: 2,
+          py: 0.75,
+          borderRadius: 2,
+          backgroundColor: 'rgba(34, 197, 94, 0.1)',
+          border: '1px solid rgba(34, 197, 94, 0.2)',
+        }}
+      >
+        <TodayIcon sx={{ color: '#22c55e', fontSize: 18 }} />
+        <Box>
+          <Typography variant="caption" sx={{ color: '#6b7280', fontSize: '0.7rem', fontWeight: 500, display: 'block', lineHeight: 1 }}>
+            Daily
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#15803d', fontSize: '0.875rem', fontWeight: 700, lineHeight: 1.2 }}>
+            ${dailyRevenue.toFixed(2)}
+          </Typography>
+        </Box>
+      </Box>
+
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          px: 2,
+          py: 0.75,
+          borderRadius: 2,
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          border: '1px solid rgba(59, 130, 246, 0.2)',
+        }}
+      >
+        <CalendarMonthIcon sx={{ color: '#3b82f6', fontSize: 18 }} />
+        <Box>
+          <Typography variant="caption" sx={{ color: '#6b7280', fontSize: '0.7rem', fontWeight: 500, display: 'block', lineHeight: 1 }}>
+            Monthly
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#1d4ed8', fontSize: '0.875rem', fontWeight: 700, lineHeight: 1.2 }}>
+            ${monthlyRevenue.toFixed(2)}
+          </Typography>
+        </Box>
+      </Box>
+    </Box>
+  );
+});
+
+RevenueDisplay.displayName = 'RevenueDisplay';
 
 export default function DashboardLayout({ children }) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -60,58 +185,77 @@ export default function DashboardLayout({ children }) {
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
   const { user, logout } = useAuth();
 
-  useEffect(() => {
-    calculateRevenue();
-    // Recalculate when component mounts or when we might have new transactions
-    const interval = setInterval(calculateRevenue, 60000); // Update every minute
-    return () => clearInterval(interval);
+  // Memoized revenue calculation
+  const calculateRevenue = useCallback(() => {
+    try {
+      const storedTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const todayTransactions = storedTransactions.filter(t => {
+        const transactionDate = new Date(t.date);
+        transactionDate.setHours(0, 0, 0, 0);
+        return transactionDate.getTime() === today.getTime();
+      });
+      
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      const monthlyTransactions = storedTransactions.filter(t => {
+        const transactionDate = new Date(t.date);
+        return transactionDate >= startOfMonth;
+      });
+      
+      setDailyRevenue(todayTransactions.reduce((sum, t) => sum + (t.total || 0), 0));
+      setMonthlyRevenue(monthlyTransactions.reduce((sum, t) => sum + (t.total || 0), 0));
+    } catch (error) {
+      console.error('Error calculating revenue:', error);
+    }
   }, []);
 
-  const calculateRevenue = () => {
-    const storedTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
-    
-    // Calculate daily revenue
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayTransactions = storedTransactions.filter(t => {
-      const transactionDate = new Date(t.date);
-      transactionDate.setHours(0, 0, 0, 0);
-      return transactionDate.getTime() === today.getTime();
-    });
-    const daily = todayTransactions.reduce((sum, t) => sum + (t.total || 0), 0);
-    setDailyRevenue(daily);
+  useEffect(() => {
+    calculateRevenue();
+    const interval = setInterval(calculateRevenue, 60000);
+    return () => clearInterval(interval);
+  }, [calculateRevenue]);
 
-    // Calculate monthly revenue
-    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    const monthlyTransactions = storedTransactions.filter(t => {
-      const transactionDate = new Date(t.date);
-      return transactionDate >= startOfMonth;
-    });
-    const monthly = monthlyTransactions.reduce((sum, t) => sum + (t.total || 0), 0);
-    setMonthlyRevenue(monthly);
-  };
+  const handleDrawerToggle = useCallback(() => {
+    setMobileOpen(prev => !prev);
+  }, []);
 
-  const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen);
-  };
-
-  const handleMenuOpen = (event) => {
+  const handleMenuOpen = useCallback((event) => {
     setAnchorEl(event.currentTarget);
-  };
+  }, []);
 
-  const handleMenuClose = () => {
+  const handleMenuClose = useCallback(() => {
     setAnchorEl(null);
-  };
+  }, []);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     logout();
     navigate('/login');
     handleMenuClose();
-  };
+  }, [logout, navigate, handleMenuClose]);
 
-  const drawer = (
+  const handleResetPassword = useCallback(() => {
+    navigate('/reset-password');
+    handleMenuClose();
+  }, [navigate, handleMenuClose]);
+
+  const handleNavigation = useCallback((path) => {
+    navigate(path);
+    if (isMobile) setMobileOpen(false);
+  }, [navigate, isMobile]);
+
+  // Memoized user display name
+  const userDisplayName = useMemo(() => {
+    if (!user) return 'User';
+    return (user.firstName || user.lastName) 
+      ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
+      : user.username || 'User';
+  }, [user]);
+
+  // Drawer content
+  const drawer = useMemo(() => (
     <Box 
-      className="h-full flex flex-col"
       sx={{
         background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
         borderRight: '1px solid #e5e7eb',
@@ -135,7 +279,7 @@ export default function DashboardLayout({ children }) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
         >
-          <Box className="flex items-center gap-3">
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
             <Box 
               sx={{
                 bgcolor: 'rgba(255, 255, 255, 0.2)',
@@ -200,7 +344,7 @@ export default function DashboardLayout({ children }) {
             gap: 1.5,
           }}
         >
-          {menuItems.map((item, index) => {
+          {MENU_ITEMS.map((item, index) => {
             const isActive = location.pathname === item.path;
             return (
               <motion.div
@@ -211,36 +355,20 @@ export default function DashboardLayout({ children }) {
                 whileHover={{ x: 4 }}
                 whileTap={{ scale: 0.98 }}
               >
-                <ListItem 
-                  disablePadding 
-                  sx={{ 
-                    mb: 0,
-                  }}
-                >
+                <ListItem disablePadding sx={{ mb: 0 }}>
                   <ListItemButton
-                    onClick={() => {
-                      navigate(item.path);
-                      if (isMobile) setMobileOpen(false);
-                    }}
+                    onClick={() => handleNavigation(item.path)}
                     sx={{
                       borderRadius: 3,
                       py: 1.75,
                       px: 3,
                       minHeight: 56,
                       transition: 'all 0.3s ease',
-                      backgroundColor: isActive 
-                        ? 'rgba(37, 99, 235, 0.1)' 
-                        : 'transparent',
-                      borderLeft: isActive 
-                        ? '4px solid #2563eb' 
-                        : '4px solid transparent',
-                      boxShadow: isActive 
-                        ? '0 4px 12px rgba(37, 99, 235, 0.15)' 
-                        : 'none',
+                      backgroundColor: isActive ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
+                      borderLeft: isActive ? '4px solid #2563eb' : '4px solid transparent',
+                      boxShadow: isActive ? '0 4px 12px rgba(37, 99, 235, 0.15)' : 'none',
                       '&:hover': {
-                        backgroundColor: isActive 
-                          ? 'rgba(37, 99, 235, 0.15)' 
-                          : 'rgba(0, 0, 0, 0.04)',
+                        backgroundColor: isActive ? 'rgba(37, 99, 235, 0.15)' : 'rgba(0, 0, 0, 0.04)',
                         transform: 'translateX(4px)',
                         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
                       },
@@ -250,9 +378,7 @@ export default function DashboardLayout({ children }) {
                       sx={{ 
                         minWidth: 48,
                         color: isActive ? '#2563eb' : '#6b7280',
-                        '& svg': {
-                          fontSize: 26,
-                        },
+                        '& svg': { fontSize: 26 },
                       }}
                     >
                       {item.icon}
@@ -274,7 +400,7 @@ export default function DashboardLayout({ children }) {
         </List>
       </Box>
 
-      {/* Logout Section */}
+      {/* User Profile Section */}
       <Box 
         sx={{ 
           p: 2.5,
@@ -283,10 +409,58 @@ export default function DashboardLayout({ children }) {
           flexShrink: 0,
         }}
       >
-        <motion.div
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-        >
+        {user && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 2,
+                mb: 2,
+                pb: 2,
+                borderBottom: '1px solid #e5e7eb',
+              }}
+            >
+              <UserAvatar user={user} size={48} />
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography
+                  variant="body1"
+                  sx={{
+                    fontWeight: 600,
+                    fontSize: '0.95rem',
+                    color: '#1f2937',
+                    lineHeight: 1.3,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {userDisplayName}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontSize: '0.8rem',
+                    color: '#6b7280',
+                    lineHeight: 1.3,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  @{user?.username || 'username'}
+                </Typography>
+              </Box>
+            </Box>
+          </motion.div>
+        )}
+
+        {/* Logout Button */}
+        {/* <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
           <ListItem disablePadding>
             <ListItemButton
               onClick={handleLogout}
@@ -298,21 +472,12 @@ export default function DashboardLayout({ children }) {
                 transition: 'all 0.2s ease',
                 '&:hover': {
                   backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                  '& .MuiListItemIcon-root': {
-                    color: '#dc2626',
-                  },
-                  '& .MuiListItemText-primary': {
-                    color: '#dc2626',
-                  },
+                  '& .MuiListItemIcon-root': { color: '#dc2626' },
+                  '& .MuiListItemText-primary': { color: '#dc2626' },
                 },
               }}
             >
-              <ListItemIcon 
-                sx={{ 
-                  minWidth: 40,
-                  color: '#6b7280',
-                }}
-              >
+              <ListItemIcon sx={{ minWidth: 40, color: '#6b7280' }}>
                 <LogoutIcon />
               </ListItemIcon>
               <ListItemText 
@@ -325,10 +490,10 @@ export default function DashboardLayout({ children }) {
               />
             </ListItemButton>
           </ListItem>
-        </motion.div>
+        </motion.div> */}
       </Box>
     </Box>
-  );
+  ), [location.pathname, user, userDisplayName, handleNavigation, handleLogout]);
 
   return (
     <Box className="flex h-screen">
@@ -336,8 +501,8 @@ export default function DashboardLayout({ children }) {
         position="fixed"
         elevation={0}
         sx={{
-          width: { md: `calc(100% - ${drawerWidth}px)` },
-          ml: { md: `${drawerWidth}px` },
+          width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
+          ml: { md: `${DRAWER_WIDTH}px` },
           backgroundColor: 'white',
           color: '#1f2937',
           borderBottom: '1px solid #e5e7eb',
@@ -361,130 +526,11 @@ export default function DashboardLayout({ children }) {
             <MenuIcon />
           </IconButton>
           
-          {/* Revenue Display */}
-          <Box 
-            sx={{ 
-              display: { xs: 'none', sm: 'flex' },
-              alignItems: 'center',
-              gap: 2,
-              flex: 1,
-              ml: { sm: 2 }
-            }}
-          >
-            {/* Daily Revenue */}
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                px: 2,
-                py: 0.75,
-                borderRadius: 2,
-                backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                border: '1px solid rgba(34, 197, 94, 0.2)',
-              }}
-            >
-              <TodayIcon sx={{ color: '#22c55e', fontSize: 18 }} />
-              <Box>
-                <Typography 
-                  variant="caption" 
-                  sx={{ 
-                    color: '#6b7280',
-                    fontSize: '0.7rem',
-                    fontWeight: 500,
-                    display: 'block',
-                    lineHeight: 1,
-                  }}
-                >
-                  Daily
-                </Typography>
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                    color: '#15803d',
-                    fontSize: '0.875rem',
-                    fontWeight: 700,
-                    lineHeight: 1.2,
-                  }}
-                >
-                  ${dailyRevenue.toFixed(2)}
-                </Typography>
-              </Box>
-            </Box>
-
-            {/* Monthly Revenue */}
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                px: 2,
-                py: 0.75,
-                borderRadius: 2,
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                border: '1px solid rgba(59, 130, 246, 0.2)',
-              }}
-            >
-              <CalendarMonthIcon sx={{ color: '#3b82f6', fontSize: 18 }} />
-              <Box>
-                <Typography 
-                  variant="caption" 
-                  sx={{ 
-                    color: '#6b7280',
-                    fontSize: '0.7rem',
-                    fontWeight: 500,
-                    display: 'block',
-                    lineHeight: 1,
-                  }}
-                >
-                  Monthly
-                </Typography>
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                    color: '#1d4ed8',
-                    fontSize: '0.875rem',
-                    fontWeight: 700,
-                    lineHeight: 1.2,
-                  }}
-                >
-                  ${monthlyRevenue.toFixed(2)}
-                </Typography>
-              </Box>
-            </Box>
-          </Box>
-
-          {/* Mobile Revenue Display */}
-          {isSmallScreen && (
-            <Box sx={{ display: 'flex', gap: 1, mr: 1 }}>
-              <Chip
-                icon={<TodayIcon sx={{ color: '#22c55e !important', fontSize: 16 }} />}
-                label={`$${dailyRevenue.toFixed(0)}`}
-                size="small"
-                sx={{
-                  backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                  color: '#15803d',
-                  fontWeight: 700,
-                  fontSize: '0.7rem',
-                  height: 24,
-                  '& .MuiChip-label': { px: 1 },
-                }}
-              />
-              <Chip
-                icon={<CalendarMonthIcon sx={{ color: '#3b82f6 !important', fontSize: 16 }} />}
-                label={`$${monthlyRevenue.toFixed(0)}`}
-                size="small"
-                sx={{
-                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                  color: '#1d4ed8',
-                  fontWeight: 700,
-                  fontSize: '0.7rem',
-                  height: 24,
-                  '& .MuiChip-label': { px: 1 },
-                }}
-              />
-            </Box>
-          )}
+          <RevenueDisplay 
+            dailyRevenue={dailyRevenue} 
+            monthlyRevenue={monthlyRevenue} 
+            isSmallScreen={isSmallScreen}
+          />
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <IconButton
@@ -492,20 +538,22 @@ export default function DashboardLayout({ children }) {
               onClick={handleMenuOpen}
               sx={{ color: '#6b7280' }}
             >
-              <Avatar sx={{ width: 36, height: 36, bgcolor: '#2563eb', fontSize: '0.875rem' }}>
-                {user?.username?.charAt(0).toUpperCase()}
-              </Avatar>
+              <UserAvatar user={user} size={36} />
             </IconButton>
             <Menu
               anchorEl={anchorEl}
               open={Boolean(anchorEl)}
               onClose={handleMenuClose}
             >
-              <MenuItem disabled>
+              <MenuItem >
                 <AccountIcon className="mr-2" />
                 {user?.username}
               </MenuItem>
               <Divider />
+              <MenuItem onClick={handleResetPassword}>
+                <LockResetIcon className="mr-2" />
+                Reset Password
+              </MenuItem>
               <MenuItem onClick={handleLogout}>
                 <LogoutIcon className="mr-2" />
                 Logout
@@ -516,20 +564,18 @@ export default function DashboardLayout({ children }) {
       </AppBar>
       <Box
         component="nav"
-        sx={{ width: { md: drawerWidth }, flexShrink: { md: 0 } }}
+        sx={{ width: { md: DRAWER_WIDTH }, flexShrink: { md: 0 } }}
       >
         <Drawer
           variant="temporary"
           open={mobileOpen}
           onClose={handleDrawerToggle}
-          ModalProps={{
-            keepMounted: true,
-          }}
+          ModalProps={{ keepMounted: true }}
           sx={{
             display: { xs: 'block', md: 'none' },
             '& .MuiDrawer-paper': {
               boxSizing: 'border-box',
-              width: drawerWidth,
+              width: DRAWER_WIDTH,
               overflow: 'hidden',
             },
           }}
@@ -542,7 +588,7 @@ export default function DashboardLayout({ children }) {
             display: { xs: 'none', md: 'block' },
             '& .MuiDrawer-paper': {
               boxSizing: 'border-box',
-              width: drawerWidth,
+              width: DRAWER_WIDTH,
               overflow: 'hidden',
             },
           }}
@@ -556,7 +602,7 @@ export default function DashboardLayout({ children }) {
         sx={{
           flexGrow: 1,
           p: 3,
-          width: { md: `calc(100% - ${drawerWidth}px)` },
+          width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
           backgroundColor: '#f9fafb',
           minHeight: '100vh',
         }}
@@ -574,4 +620,3 @@ export default function DashboardLayout({ children }) {
     </Box>
   );
 }
-

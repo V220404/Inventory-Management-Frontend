@@ -29,7 +29,7 @@ export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     
@@ -38,7 +38,7 @@ export default function Login() {
       return;
     }
 
-    const success = login(username, password);
+    const success = await login(username, password);
     if (success) {
       navigate('/');
     } else {
@@ -116,7 +116,6 @@ export default function Login() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.3 }}
-                style={{ marginBottom: '16px' }}
               >
                 <TextField
                   fullWidth
@@ -124,7 +123,7 @@ export default function Login() {
                   variant="outlined"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  sx={{ marginBottom: '16px' }}
+                  sx={{ marginBottom: '24px' }}
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
@@ -139,7 +138,6 @@ export default function Login() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.4 }}
-                style={{ marginBottom: '24px' }}
               >
                 <TextField
                   fullWidth
@@ -187,6 +185,7 @@ export default function Login() {
                     fontSize: '16px',
                     fontWeight: 600,
                     boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                    marginBottom: '16px',
                     '&:hover': {
                       background: 'linear-gradient(to right, #1e40af, #1e3a8a)',
                     },
@@ -195,6 +194,31 @@ export default function Login() {
                   Sign In
                 </Button>
               </motion.div>
+
+              <Box sx={{ textAlign: 'center', marginTop: '16px' }}>
+                <Typography variant="body2" sx={{ color: 'text.secondary', marginBottom: '12px' }}>
+                  Don't have an account?
+                </Typography>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  size="medium"
+                  onClick={() => navigate('/register')}
+                  sx={{
+                    borderColor: '#2563eb',
+                    color: '#2563eb',
+                    padding: '10px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    '&:hover': {
+                      borderColor: '#1e40af',
+                      backgroundColor: 'rgba(37, 99, 235, 0.04)',
+                    },
+                  }}
+                >
+                  Create Account
+                </Button>
+              </Box>
             </form>
           </CardContent>
         </Card>

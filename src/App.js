@@ -2,8 +2,10 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import Login from './pages/Login';
+import Register from './pages/Register';
+import ResetPassword from './pages/ResetPassword';
 import DashboardLayout from './components/Layout/DashboardLayout';
 import Dashboard from './pages/Dashboard';
 import Products from './pages/Products';
@@ -40,6 +42,7 @@ function AppRoutes() {
     <AnimatePresence mode="wait">
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
         <Route
           path="/*"
           element={
@@ -51,6 +54,7 @@ function AppRoutes() {
                   <Route path="/pos" element={<POS />} />
                   <Route path="/stock" element={<StockManagement />} />
                   <Route path="/reports" element={<Reports />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
                 </Routes>
               </DashboardLayout>
             </ProtectedRoute>
