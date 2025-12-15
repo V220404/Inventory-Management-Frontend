@@ -19,10 +19,11 @@ import {
   IconButton,
   Chip,
   Grid,
-  Paper,
   InputAdornment,
   useMediaQuery,
   useTheme,
+  Alert,
+  CircularProgress,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -31,10 +32,9 @@ import {
   Search as SearchIcon,
   QrCode as BarcodeIcon,
   Print as PrintIcon,
-  FilterList as FilterIcon,
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
-import Barcode from 'react-barcode';
+import apiRequest from '../utils/api';
 
 export default function Products() {
   const theme = useTheme();
@@ -48,14 +48,15 @@ export default function Products() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [barcodeDialogOpen, setBarcodeDialogOpen] = useState(false);
   const [selectedBarcodeProduct, setSelectedBarcodeProduct] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const [formData, setFormData] = useState({
     name: '',
     category: '',
     price: '',
     stock: '',
-    description: '',
-    barcode: '',
   });
 
   useEffect(() => {
@@ -66,28 +67,24 @@ export default function Products() {
     filterProducts();
   }, [searchTerm, selectedCategory, products]);
 
-  const loadProducts = () => {
-    const stored = JSON.parse(localStorage.getItem('products') || '[]');
-    setProducts(stored);
-  };
+  const loadProducts = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await apiRequest('/products');
+      const data = await response.json();
 
-  const saveProducts = (newProducts) => {
-    localStorage.setItem('products', JSON.stringify(newProducts));
-    setProducts(newProducts);
-  };
-
-  const generateProductId = () => {
-    const stored = JSON.parse(localStorage.getItem('products') || '[]');
-    const nextId = stored.length + 1;
-    return `INV-${100000 + nextId}`;
-  };
-
-  const generateBarcode = () => {
-    // Generate a unique barcode string
-    // Using timestamp + random number for uniqueness
-    const timestamp = Date.now().toString().slice(-8);
-    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-    return `${timestamp}${random}`;
+      if (data.success) {
+        setProducts(data.data?.products || data.data || []);
+      } else {
+        setError(data.message || 'Failed to load products');
+      }
+    } catch (err) {
+      console.error('Load products error:', err);
+      setError('Failed to load products. Please check if the server is running.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const filterProducts = () => {
@@ -96,9 +93,8 @@ export default function Products() {
     if (searchTerm) {
       filtered = filtered.filter(
         (p) =>
-          p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          p.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          p.barcode.includes(searchTerm)
+          p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          p.barcodeId?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -112,20 +108,24 @@ export default function Products() {
   const handleOpenDialog = (product = null) => {
     if (product) {
       setEditingProduct(product);
-      setFormData(product);
+      setFormData({
+        name: product.name || '',
+        category: product.category || '',
+        price: product.price?.toString() || '',
+        stock: product.stock?.toString() || '',
+      });
     } else {
       setEditingProduct(null);
-      const newBarcode = generateBarcode();
       setFormData({
         name: '',
         category: '',
         price: '',
         stock: '',
-        description: '',
-        barcode: newBarcode,
       });
     }
     setOpenDialog(true);
+    setError('');
+    setSuccess('');
   };
 
   const handleCloseDialog = () => {
@@ -136,46 +136,117 @@ export default function Products() {
       category: '',
       price: '',
       stock: '',
-      description: '',
-      barcode: '',
     });
+    setError('');
+    setSuccess('');
   };
 
-  const handleSave = () => {
-    if (!formData.name || !formData.price || !formData.stock) {
-      alert('Please fill in all required fields');
+  const handleSave = async () => {
+    if (!formData.name || !formData.category || !formData.price || !formData.stock) {
+      setError('Please fill in all required fields');
       return;
     }
 
-    const updatedProducts = [...products];
+    setLoading(true);
+    setError('');
+    setSuccess('');
 
-    if (editingProduct) {
-      const index = updatedProducts.findIndex((p) => p.id === editingProduct.id);
-      updatedProducts[index] = {
-        ...formData,
-        id: editingProduct.id,
+    try {
+      const productData = {
+        name: formData.name.trim(),
+        category: formData.category.trim(),
         price: parseFloat(formData.price),
         stock: parseInt(formData.stock),
       };
-    } else {
-      const newProduct = {
-        ...formData,
-        id: generateProductId(),
-        price: parseFloat(formData.price),
-        stock: parseInt(formData.stock),
-        createdAt: new Date().toISOString(),
-      };
-      updatedProducts.push(newProduct);
+
+      let response;
+      if (editingProduct) {
+        // Update product
+        response = await apiRequest(`/products/${editingProduct.id}`, {
+          method: 'PUT',
+          body: JSON.stringify(productData),
+        });
+      } else {
+        // Create product
+        response = await apiRequest('/products', {
+          method: 'POST',
+          body: JSON.stringify(productData),
+        });
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        setSuccess(editingProduct ? 'Product updated successfully!' : 'Product created successfully!');
+        await loadProducts();
+        setTimeout(() => {
+          handleCloseDialog();
+        }, 1000);
+      } else {
+        setError(data.message || 'Failed to save product');
+      }
+    } catch (err) {
+      console.error('Save product error:', err);
+      setError('Failed to save product. Please try again.');
+    } finally {
+      setLoading(false);
     }
-
-    saveProducts(updatedProducts);
-    handleCloseDialog();
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm('Are you sure you want to delete this product?')) {
-      const updatedProducts = products.filter((p) => p.id !== id);
-      saveProducts(updatedProducts);
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this product?')) {
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await apiRequest(`/products/${id}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setSuccess('Product deleted successfully!');
+        await loadProducts();
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        setError(data.message || 'Failed to delete product');
+      }
+    } catch (err) {
+      console.error('Delete product error:', err);
+      setError('Failed to delete product. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegenerateBarcode = async (id) => {
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await apiRequest(`/products/${id}/regenerate-barcode`, {
+        method: 'PUT',
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setSuccess('Barcode regenerated successfully!');
+        await loadProducts();
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        setError(data.message || 'Failed to regenerate barcode');
+      }
+    } catch (err) {
+      console.error('Regenerate barcode error:', err);
+      setError('Failed to regenerate barcode. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -202,6 +273,18 @@ export default function Products() {
           </Button>
         </Box>
 
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
+            {error}
+          </Alert>
+        )}
+
+        {success && (
+          <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>
+            {success}
+          </Alert>
+        )}
+
         <Card className="shadow-lg rounded-xl mb-4">
           <CardContent>
             <Grid container spacing={2} className="mb-4">
@@ -221,104 +304,161 @@ export default function Products() {
                 />
               </Grid>
               <Grid item xs={12} md={6}>
-                <Box className="flex gap-2">
-                  <TextField
-                    select
-                    fullWidth
-                    label="Category"
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    SelectProps={{
-                      native: true,
-                    }}
-                  >
-                    <option value="all">All Categories</option>
-                    {categories.map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
-                      </option>
-                    ))}
-                  </TextField>
-                </Box>
+                <TextField
+                  select
+                  fullWidth
+                  label="Category"
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  SelectProps={{
+                    native: true,
+                  }}
+                >
+                  <option value="all">All Categories</option>
+                  {categories.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </TextField>
               </Grid>
             </Grid>
           </CardContent>
         </Card>
 
         <Card className="shadow-lg rounded-xl">
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow className="bg-gray-50">
-                  <TableCell className="font-semibold">Product ID</TableCell>
-                  <TableCell className="font-semibold">Name</TableCell>
-                  <TableCell className="font-semibold">Category</TableCell>
-                  <TableCell className="font-semibold">Price</TableCell>
-                  <TableCell className="font-semibold">Stock</TableCell>
-                  <TableCell className="font-semibold">Barcode</TableCell>
-                  <TableCell className="font-semibold">Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                <AnimatePresence>
-                  {filteredProducts.map((product, index) => (
-                    <motion.tr
-                      key={product.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      transition={{ delay: index * 0.05 }}
-                      component={TableRow}
-                    >
-                      <TableCell>{product.id}</TableCell>
-                      <TableCell className="font-medium">{product.name}</TableCell>
-                      <TableCell>
-                        <Chip label={product.category || 'N/A'} size="small" />
-                      </TableCell>
-                      <TableCell>${product.price.toFixed(2)}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={product.stock}
-                          color={product.stock < 10 ? 'error' : 'default'}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">{product.barcode}</TableCell>
-                      <TableCell>
-                        <Box className="flex gap-1">
-                          <IconButton
+          {loading && products.length === 0 ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow className="bg-gray-50">
+                    <TableCell className="font-semibold">Barcode ID</TableCell>
+                    <TableCell className="font-semibold">Name</TableCell>
+                    <TableCell className="font-semibold">Category</TableCell>
+                    <TableCell className="font-semibold">Price</TableCell>
+                    <TableCell className="font-semibold">Stock</TableCell>
+                    <TableCell className="font-semibold">Barcode</TableCell>
+                    <TableCell className="font-semibold">Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  <AnimatePresence>
+                    {filteredProducts.map((product, index) => (
+                      <motion.tr
+                        key={product.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 20 }}
+                        transition={{ delay: index * 0.05 }}
+                        component={TableRow}
+                      >
+                        <TableCell className="font-mono text-xs">{product.barcodeId}</TableCell>
+                        <TableCell className="font-medium">{product.name}</TableCell>
+                        <TableCell>
+                          <Chip label={product.category || 'N/A'} size="small" />
+                        </TableCell>
+                        <TableCell>${product.price?.toFixed(2)}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={product.stock}
+                            color={product.stock < 10 ? 'error' : 'default'}
                             size="small"
-                            onClick={() => {
-                              setSelectedBarcodeProduct(product);
-                              setBarcodeDialogOpen(true);
-                            }}
-                            className="text-blue-500"
-                          >
-                            <BarcodeIcon fontSize="small" />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleOpenDialog(product)}
-                            className="text-green-500"
-                          >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleDelete(product.id)}
-                            className="text-red-500"
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Box>
-                      </TableCell>
-                    </motion.tr>
-                  ))}
-                </AnimatePresence>
-              </TableBody>
-            </Table>
-          </TableContainer>
-          {filteredProducts.length === 0 && (
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {product.barcodeImg ? (
+                            <Box
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: 80,
+                                height: 40,
+                                cursor: 'pointer',
+                                '&:hover': {
+                                  opacity: 0.8,
+                                },
+                              }}
+                              onClick={() => {
+                                setSelectedBarcodeProduct(product);
+                                setBarcodeDialogOpen(true);
+                              }}
+                            >
+                              <img
+                                src={product.barcodeImg.startsWith('data:')
+                                  ? product.barcodeImg
+                                  : `data:image/png;base64,${product.barcodeImg}`}
+                                alt={`Barcode ${product.barcodeId}`}
+                                style={{
+                                  maxWidth: '100%',
+                                  maxHeight: '100%',
+                                  objectFit: 'contain',
+                                }}
+                                onError={(e) => {
+                                  console.error('Barcode thumbnail error for product:', product.id);
+                                  e.target.style.display = 'none';
+                                  // Show regenerate button on error
+                                  const parent = e.target.parentElement;
+                                  if (parent) {
+                                    parent.innerHTML = '<span style="color: red; font-size: 10px;">Regenerate</span>';
+                                  }
+                                }}
+                              />
+                            </Box>
+                          ) : (
+                            <Chip
+                              label="Missing"
+                              size="small"
+                              color="error"
+                              onClick={() => handleRegenerateBarcode(product.id)}
+                              sx={{ cursor: 'pointer' }}
+                            />
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Box className="flex gap-1">
+                            <IconButton
+                              size="small"
+                              onClick={() => {
+                                console.log('Opening barcode dialog for product:', product);
+                                console.log('Barcode image:', product.barcodeImg ? 'Present' : 'Missing');
+                                console.log('Barcode image preview:', product.barcodeImg?.substring(0, 100));
+                                setSelectedBarcodeProduct(product);
+                                setBarcodeDialogOpen(true);
+                              }}
+                              className="text-blue-500"
+                            >
+                              <BarcodeIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleOpenDialog(product)}
+                              className="text-green-500"
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleDelete(product.id)}
+                              className="text-red-500"
+                              disabled={loading}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Box>
+                        </TableCell>
+                      </motion.tr>
+                    ))}
+                  </AnimatePresence>
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+          {filteredProducts.length === 0 && !loading && (
             <Box className="text-center py-8">
               <Typography variant="body1" className="text-gray-500">
                 No products found
@@ -332,6 +472,16 @@ export default function Products() {
             {editingProduct ? 'Edit Product' : 'Add New Product'}
           </DialogTitle>
           <DialogContent>
+            {error && (
+              <Alert severity="error" sx={{ mb: 2, mt: 2 }}>
+                {error}
+              </Alert>
+            )}
+            {success && (
+              <Alert severity="success" sx={{ mb: 2, mt: 2 }}>
+                {success}
+              </Alert>
+            )}
             <Grid container spacing={2} className="mt-2">
               <Grid item xs={12}>
                 <TextField
@@ -344,7 +494,7 @@ export default function Products() {
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
-                  label="Category"
+                  label="Category *"
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                   placeholder="e.g., Electronics, Clothing"
@@ -353,10 +503,10 @@ export default function Products() {
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
-                  label="Barcode"
-                  value={formData.barcode}
+                  label="Barcode ID"
+                  value={editingProduct?.barcodeId || 'Auto-generated'}
                   disabled
-                  helperText="Auto-generated"
+                  helperText="Auto-generated when creating"
                 />
               </Grid>
               <Grid item xs={12} md={6}>
@@ -380,26 +530,19 @@ export default function Products() {
                   onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
                 />
               </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Description"
-                  multiline
-                  rows={3}
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                />
-              </Grid>
             </Grid>
           </DialogContent>
           <DialogActions>
-            <Button onClick={handleCloseDialog}>Cancel</Button>
-            <Button onClick={handleSave} variant="contained">
-              {editingProduct ? 'Update' : 'Create'}
+            <Button onClick={handleCloseDialog} disabled={loading}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave} variant="contained" disabled={loading}>
+              {loading ? 'Saving...' : editingProduct ? 'Update' : 'Create'}
             </Button>
           </DialogActions>
         </Dialog>
 
+        {/* Barcode Dialog */}
         <Dialog 
           open={barcodeDialogOpen} 
           onClose={() => setBarcodeDialogOpen(false)}
@@ -407,218 +550,157 @@ export default function Products() {
           fullWidth
           PaperProps={{
             sx: {
-              borderRadius: { xs: 0, sm: 2 },
-              margin: { xs: 0, sm: 2 },
-              maxHeight: { xs: '100vh', sm: '90vh' },
-              width: { xs: '100%', sm: 'auto' }
+              borderRadius: 3,
             }
           }}
-          fullScreen={isMobile}
         >
-          <DialogContent 
-            sx={{ 
-              textAlign: 'center', 
-              py: { xs: 4, sm: 6 }, 
-              px: { xs: 2, sm: 4 },
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              minHeight: { xs: 'auto', sm: 400 }
-            }}
-          >
+          <DialogContent sx={{ textAlign: 'center', py: 4 }}>
             {selectedBarcodeProduct && (
-              <Box sx={{ width: '100%', maxWidth: '100%' }}>
-                {/* Barcode Display */}
-                <Box 
-                  sx={{ 
+              <Box>
+                <Typography variant="h6" sx={{ mb: 2 }}>
+                  {selectedBarcodeProduct.name}
+                </Typography>
+                {selectedBarcodeProduct.barcodeImg ? (
+                  <Box sx={{ 
+                    mb: 2, 
                     display: 'flex', 
                     justifyContent: 'center',
                     alignItems: 'center',
-                    bgcolor: 'white',
-                    p: { xs: 2, sm: 4 },
-                    mb: 3,
-                    minHeight: { xs: 150, sm: 180 },
-                    width: '100%',
-                    overflow: 'auto',
-                    borderRadius: 1,
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                    '& svg': {
-                      maxWidth: '100%',
-                      height: 'auto'
-                    }
-                  }}
-                  id="barcode-container"
-                >
-                  {selectedBarcodeProduct.barcode ? (
-                    <Box sx={{ 
-                      width: '100%',
-                      display: 'flex',
-                      justifyContent: 'center',
-                      overflowX: 'auto',
-                      '& > svg': {
-                        maxWidth: '100%',
-                        height: 'auto'
-                      }
-                    }}>
-                      <Barcode 
-                        value={selectedBarcodeProduct.barcode}
-                        width={isMobile ? 1.5 : 2}
-                        height={isMobile ? 60 : 80}
-                        displayValue={true}
-                        fontSize={isMobile ? 12 : 16}
-                      />
-                    </Box>
-                  ) : (
+                    minHeight: 120,
+                  }}>
+                    {(() => {
+                      const imageSrc = selectedBarcodeProduct.barcodeImg.startsWith('data:') 
+                        ? selectedBarcodeProduct.barcodeImg 
+                        : `data:image/png;base64,${selectedBarcodeProduct.barcodeImg}`;
+                      
+                      console.log('Barcode image src length:', imageSrc.length);
+                      console.log('Barcode image src preview:', imageSrc.substring(0, 100));
+                      
+                      return (
+                        <img 
+                          src={imageSrc}
+                          alt={`Barcode ${selectedBarcodeProduct.barcodeId}`}
+                          style={{ 
+                            maxWidth: '100%', 
+                            height: 'auto',
+                            minHeight: 80,
+                            border: '1px solid #e0e0e0',
+                            borderRadius: '4px',
+                            padding: '15px',
+                            backgroundColor: 'white',
+                            display: 'block',
+                          }}
+                          onError={(e) => {
+                            console.error('Barcode image load error');
+                            console.error('Image src length:', imageSrc.length);
+                            console.error('Image src starts with:', imageSrc.substring(0, 50));
+                            console.error('Error event:', e);
+                            // Show error message instead of hiding
+                            const errorBox = document.createElement('div');
+                            errorBox.textContent = 'Failed to load barcode image';
+                            errorBox.style.color = 'red';
+                            errorBox.style.padding = '10px';
+                            e.target.parentNode.appendChild(errorBox);
+                          }}
+                          onLoad={() => {
+                            console.log('Barcode image loaded successfully');
+                          }}
+                        />
+                      );
+                    })()}
+                  </Box>
+                ) : (
+                  <Box sx={{ mb: 2, p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
                     <Typography variant="body2" color="error">
-                      No barcode available
+                      Barcode image not available
                     </Typography>
-                  )}
-                </Box>
-                {/* Barcode Number */}
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                      Barcode ID: {selectedBarcodeProduct.barcodeId}
+                    </Typography>
+                  </Box>
+                )}
                 <Typography 
                   variant="h6" 
                   className="font-mono"
                   sx={{ 
-                    fontSize: { xs: '0.95rem', sm: '1.1rem' },
+                    fontSize: '1.1rem',
                     fontWeight: 500,
-                    letterSpacing: { xs: 1, sm: 2 },
+                    letterSpacing: 2,
                     color: '#1a1a1a',
-                    mb: 4,
-                    wordBreak: 'break-all',
-                    px: { xs: 1, sm: 0 }
+                    mb: 3,
                   }}
                 >
-                  {selectedBarcodeProduct.barcode}
+                  {selectedBarcodeProduct.barcodeId}
                 </Typography>
-                {/* Action Buttons */}
-                <Box 
-                  sx={{ 
-                    display: 'flex', 
-                    justifyContent: 'center', 
-                    gap: 2, 
-                    mt: 3,
-                    flexDirection: { xs: 'column', sm: 'row' },
-                    width: '100%',
-                    px: { xs: 2, sm: 0 }
-                  }}
-                >
+                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
                   <Button 
                     onClick={() => setBarcodeDialogOpen(false)}
-                    variant="text"
-                    fullWidth={isMobile}
-                    sx={{ 
-                      minWidth: { xs: '100%', sm: 100 },
-                      textTransform: 'uppercase',
-                      color: '#2196f3',
-                      fontWeight: 600,
-                      letterSpacing: 0.5,
-                      py: { xs: 1.5, sm: 1 },
-                      '&:hover': {
-                        bgcolor: 'rgba(33, 150, 243, 0.08)'
-                      }
-                    }}
+                    variant="outlined"
                   >
-                    CLOSE
+                    Close
                   </Button>
                   <Button
                     variant="contained"
                     startIcon={<PrintIcon />}
-                    fullWidth={isMobile}
                     onClick={() => {
-                      const printContent = document.getElementById('barcode-container');
-                      if (printContent) {
-                        const printWindow = window.open('', '_blank');
-                        printWindow.document.write(`
-                          <!DOCTYPE html>
-                          <html>
-                            <head>
-                              <title>Barcode - ${selectedBarcodeProduct?.name}</title>
-                              <meta charset="utf-8">
-                              <style>
-                                * {
-                                  margin: 0;
-                                  padding: 0;
-                                  box-sizing: border-box;
-                                }
-                                @media print {
-                                  body { 
-                                    margin: 0;
-                                    padding: 20px;
-                                  }
-                                  @page {
-                                    margin: 0.5cm;
-                                  }
-                                }
-                                body {
-                                  display: flex;
-                                  flex-direction: column;
-                                  align-items: center;
-                                  justify-content: center;
-                                  padding: 40px 20px;
-                                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
-                                  min-height: 100vh;
-                                  background: white;
-                                }
-                                .barcode-wrapper {
-                                  text-align: center;
-                                  padding: 20px;
-                                  background: white;
-                                  width: 100%;
-                                  max-width: 400px;
-                                }
-                                .barcode-number {
-                                  font-size: 18px;
-                                  font-weight: 500;
-                                  font-family: 'Courier New', monospace;
-                                  letter-spacing: 2px;
-                                  margin-top: 15px;
-                                  color: #1a1a1a;
-                                  word-break: break-all;
-                                }
-                                .product-name {
-                                  font-size: 16px;
-                                  margin-bottom: 20px;
-                                  font-weight: 500;
-                                  color: #333;
-                                }
-                                svg {
-                                  max-width: 100%;
-                                  height: auto;
-                                }
-                              </style>
-                            </head>
-                            <body>
-                              <div class="barcode-wrapper">
-                                <div class="product-name">${selectedBarcodeProduct?.name}</div>
-                                ${printContent.innerHTML}
-                                <div class="barcode-number">${selectedBarcodeProduct?.barcode}</div>
-                              </div>
-                            </body>
-                          </html>
-                        `);
-                        printWindow.document.close();
-                        setTimeout(() => {
-                          printWindow.print();
-                          printWindow.close();
-                        }, 250);
-                      }
-                    }}
-                    sx={{ 
-                      minWidth: { xs: '100%', sm: 120 },
-                      bgcolor: '#1976d2',
-                      textTransform: 'uppercase',
-                      fontWeight: 600,
-                      letterSpacing: 0.5,
-                      py: { xs: 1.5, sm: 1 },
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                      '&:hover': { 
-                        bgcolor: '#1565c0',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
-                      }
+                      const barcodeImgSrc = selectedBarcodeProduct.barcodeImg?.startsWith('data:')
+                        ? selectedBarcodeProduct.barcodeImg
+                        : `data:image/png;base64,${selectedBarcodeProduct.barcodeImg}`;
+                      
+                      const printWindow = window.open('', '_blank');
+                      printWindow.document.write(`
+                        <!DOCTYPE html>
+                        <html>
+                          <head>
+                            <title>Barcode - ${selectedBarcodeProduct.name}</title>
+                            <style>
+                              body {
+                                display: flex;
+                                flex-direction: column;
+                                align-items: center;
+                                justify-content: center;
+                                padding: 40px;
+                                font-family: Arial, sans-serif;
+                              }
+                              .barcode-wrapper {
+                                text-align: center;
+                                padding: 20px;
+                              }
+                              .barcode-number {
+                                font-size: 18px;
+                                font-weight: 500;
+                                font-family: monospace;
+                                letter-spacing: 2px;
+                                margin-top: 15px;
+                              }
+                              .product-name {
+                                font-size: 16px;
+                                margin-bottom: 20px;
+                                font-weight: 500;
+                              }
+                              img {
+                                max-width: 100%;
+                                height: auto;
+                              }
+                            </style>
+                          </head>
+                          <body>
+                            <div class="barcode-wrapper">
+                              <div class="product-name">${selectedBarcodeProduct.name}</div>
+                              <img src="${barcodeImgSrc}" alt="Barcode" />
+                              <div class="barcode-number">${selectedBarcodeProduct.barcodeId}</div>
+                            </div>
+                          </body>
+                        </html>
+                      `);
+                      printWindow.document.close();
+                      setTimeout(() => {
+                        printWindow.print();
+                        printWindow.close();
+                      }, 250);
                     }}
                   >
-                    PRINT
+                    Print
                   </Button>
                 </Box>
               </Box>
@@ -629,4 +711,3 @@ export default function Products() {
     </Box>
   );
 }
-
