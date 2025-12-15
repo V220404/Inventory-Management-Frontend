@@ -36,6 +36,7 @@ import {
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
+import { getRevenueStats } from '../../utils/api';
 
 const DRAWER_WIDTH = 280;
 
@@ -186,36 +187,36 @@ export default function DashboardLayout({ children }) {
   const { user, logout } = useAuth();
 
   // Memoized revenue calculation
-  const calculateRevenue = useCallback(() => {
+  const calculateRevenue = useCallback(async () => {
     try {
-      const storedTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      if (!user?.username) return;
       
-      const todayTransactions = storedTransactions.filter(t => {
-        const transactionDate = new Date(t.date);
-        transactionDate.setHours(0, 0, 0, 0);
-        return transactionDate.getTime() === today.getTime();
-      });
-      
-      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-      const monthlyTransactions = storedTransactions.filter(t => {
-        const transactionDate = new Date(t.date);
-        return transactionDate >= startOfMonth;
-      });
-      
-      setDailyRevenue(todayTransactions.reduce((sum, t) => sum + (t.total || 0), 0));
-      setMonthlyRevenue(monthlyTransactions.reduce((sum, t) => sum + (t.total || 0), 0));
+      const response = await getRevenueStats(user.username);
+      if (response.success) {
+        setDailyRevenue(response.data.dailyRevenue || 0);
+        setMonthlyRevenue(response.data.monthlyRevenue || 0);
+      } else {
+        console.error('Failed to fetch revenue stats:', response.message);
+        // Fallback to 0 if API fails
+        setDailyRevenue(0);
+        setMonthlyRevenue(0);
+      }
     } catch (error) {
       console.error('Error calculating revenue:', error);
+      // Fallback to 0 if API fails
+      setDailyRevenue(0);
+      setMonthlyRevenue(0);
     }
-  }, []);
+  }, [user?.username]);
 
   useEffect(() => {
-    calculateRevenue();
-    const interval = setInterval(calculateRevenue, 60000);
-    return () => clearInterval(interval);
-  }, [calculateRevenue]);
+    if (user?.username) {
+      calculateRevenue();
+      // Update revenue every 30 seconds
+      const interval = setInterval(calculateRevenue, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [calculateRevenue, user?.username]);
 
   const handleDrawerToggle = useCallback(() => {
     setMobileOpen(prev => !prev);

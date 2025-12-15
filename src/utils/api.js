@@ -29,5 +29,59 @@ export const apiRequest = async (endpoint, options = {}) => {
   return response;
 };
 
+// Bill/POS related functions
+export const getProductByBarcode = async (barcodeId, username) => {
+  const response = await apiRequest(`/products/by-barcode/${barcodeId}`);
+  return response.json();
+};
+
+export const createBill = async (username) => {
+  const response = await apiRequest('/bills', {
+    method: 'POST',
+  });
+  return response.json();
+};
+
+export const addItemToBill = async (billId, username, itemData) => {
+  const response = await apiRequest(`/bills/${billId}/items`, {
+    method: 'POST',
+    body: JSON.stringify(itemData),
+  });
+  return response.json();
+};
+
+export const getBill = async (billId, username) => {
+  const response = await apiRequest(`/bills/${billId}`);
+  return response.json();
+};
+
+export const updateBillItem = async (billId, itemId, username, quantity) => {
+  const response = await apiRequest(`/bills/${billId}/items/${itemId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ quantity }),
+  });
+  return response.json();
+};
+
+export const removeBillItem = async (billId, itemId, username) => {
+  const response = await apiRequest(`/bills/${billId}/items/${itemId}`, {
+    method: 'DELETE',
+  });
+  return response.json();
+};
+
+export const checkoutBill = async (billId, username) => {
+  const response = await apiRequest(`/bills/${billId}/checkout`, {
+    method: 'POST',
+  });
+  return response.json();
+};
+
+// Sales/Revenue related functions
+export const getRevenueStats = async (username) => {
+  const response = await apiRequest('/sales/revenue');
+  return response.json();
+};
+
 export default apiRequest;
 
