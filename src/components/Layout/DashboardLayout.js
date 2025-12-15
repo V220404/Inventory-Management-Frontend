@@ -240,6 +240,11 @@ export default function DashboardLayout({ children }) {
     handleMenuClose();
   }, [navigate, handleMenuClose]);
 
+  const handleSettings = useCallback(() => {
+    navigate('/settings');
+    handleMenuClose();
+  }, [navigate, handleMenuClose]);
+
   const handleNavigation = useCallback((path) => {
     navigate(path);
     if (isMobile) setMobileOpen(false);
@@ -404,6 +409,8 @@ export default function DashboardLayout({ children }) {
       <Box 
         sx={{ 
           p: 2.5,
+          pt: 4,
+          mt: 2,
           borderTop: '1px solid #e5e7eb',
           backgroundColor: '#f9fafb',
           flexShrink: 0,
@@ -490,7 +497,7 @@ export default function DashboardLayout({ children }) {
               />
             </ListItemButton>
           </ListItem>
-        </motion.div> */}
+        </motion.div> */} 
       </Box>
     </Box>
   ), [location.pathname, user, userDisplayName, handleNavigation, handleLogout]);
@@ -544,18 +551,115 @@ export default function DashboardLayout({ children }) {
               anchorEl={anchorEl}
               open={Boolean(anchorEl)}
               onClose={handleMenuClose}
+              PaperProps={{
+                sx: {
+                  mt: 1.5,
+                  minWidth: 250,
+                  borderRadius: 3,
+                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                  overflow: 'hidden',
+                }
+              }}
             >
-              <MenuItem >
-                <AccountIcon className="mr-2" />
-                {user?.username}
-              </MenuItem>
+              <Box sx={{ p: 2, pb: 1.5 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <UserAvatar user={user} size={48} />
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography
+                      variant="body1"
+                      sx={{
+                        fontWeight: 600,
+                        fontSize: '0.95rem',
+                        color: '#1f2937',
+                        lineHeight: 1.3,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {userDisplayName}
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontSize: '0.8rem',
+                        color: '#6b7280',
+                        lineHeight: 1.3,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      @{user?.username || 'username'}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
               <Divider />
-              <MenuItem onClick={handleResetPassword}>
-                <LockResetIcon className="mr-2" />
+              <MenuItem 
+                onClick={handleSettings}
+                sx={{
+                  borderRadius: 2,
+                  mx: 1,
+                  my: 0.5,
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                    '& .MuiSvgIcon-root': {
+                      color: '#2563eb',
+                    },
+                    '& .MuiTypography-root': {
+                      color: '#2563eb',
+                      fontWeight: 600,
+                    },
+                  },
+                }}
+              >
+                <AccountIcon sx={{ mr: 2, fontSize: 20 }} />
+                Settings
+              </MenuItem>
+              <MenuItem 
+                onClick={handleResetPassword}
+                sx={{
+                  borderRadius: 2,
+                  mx: 1,
+                  my: 0.5,
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                    '& .MuiSvgIcon-root': {
+                      color: '#2563eb',
+                    },
+                    '& .MuiTypography-root': {
+                      color: '#2563eb',
+                      fontWeight: 600,
+                    },
+                  },
+                }}
+              >
+                <LockResetIcon sx={{ mr: 2, fontSize: 20 }} />
                 Reset Password
               </MenuItem>
-              <MenuItem onClick={handleLogout}>
-                <LogoutIcon className="mr-2" />
+              <MenuItem 
+                onClick={handleLogout}
+                sx={{
+                  borderRadius: 2,
+                  mx: 1,
+                  my: 0.5,
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    '& .MuiSvgIcon-root': {
+                      color: '#dc2626',
+                    },
+                    '& .MuiTypography-root': {
+                      color: '#dc2626',
+                      fontWeight: 600,
+                    },
+                  },
+                }}
+              >
+                <LogoutIcon sx={{ mr: 2, fontSize: 20 }} />
                 Logout
               </MenuItem>
             </Menu>

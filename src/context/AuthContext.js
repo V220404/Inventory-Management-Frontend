@@ -231,6 +231,68 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateProfile = async (profileData) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Include current username to identify the user
+      const requestBody = {
+        ...profileData,
+        userId: user?.username || user?.id, // Use username to identify user
+      };
+
+      const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: `Server error: ${response.status}` }));
+        setError(errorData.message || `Update failed with status ${response.status}`);
+        setLoading(false);
+        return false;
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        const userData = data.data || data.user;
+        
+        if (!userData) {
+          console.error('No user data in update response:', data);
+          setError('Profile updated but user data not received');
+          setLoading(false);
+          return false;
+        }
+
+        // Update user state and localStorage
+        setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+        setLoading(false);
+        return true;
+      } else {
+        setError(data.message || 'Failed to update profile');
+        setLoading(false);
+        return false;
+      }
+    } catch (error) {
+      console.error('Update profile error:', error);
+      
+      if (error.message && error.message.includes('Failed to fetch')) {
+        setError('Cannot connect to server. Please make sure the backend server is running on port 5000.');
+      } else {
+        setError(error.message || 'Network error. Please check if the server is running.');
+      }
+      
+      setLoading(false);
+      return false;
+    }
+  };
+
   const logout = () => {
     setIsAuthenticated(false);
     setUser(null);
@@ -246,6 +308,7 @@ export const AuthProvider = ({ children }) => {
       login, 
       register,
       resetPassword,
+      updateProfile,
       logout, 
       loading, 
       error 

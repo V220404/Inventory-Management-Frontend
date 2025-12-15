@@ -6,6 +6,7 @@ import { AnimatePresence } from 'framer-motion';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ResetPassword from './pages/ResetPassword';
+import Settings from './pages/Settings';
 import DashboardLayout from './components/Layout/DashboardLayout';
 import Dashboard from './pages/Dashboard';
 import Products from './pages/Products';
@@ -55,6 +56,7 @@ function AppRoutes() {
                   <Route path="/stock" element={<StockManagement />} />
                   <Route path="/reports" element={<Reports />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route path="/settings" element={<Settings />} />
                 </Routes>
               </DashboardLayout>
             </ProtectedRoute>
