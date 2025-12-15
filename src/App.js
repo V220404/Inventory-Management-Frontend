@@ -40,30 +40,29 @@ const ProtectedRoute = ({ children }) => {
 
 function AppRoutes() {
   return (
-    <AnimatePresence mode="wait">
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route
-          path="/*"
-          element={
-            <ProtectedRoute>
-              <DashboardLayout>
-                <Routes>
-                  <Route path="/" element={<Dashboard />} />
-                  <Route path="/products" element={<Products />} />
-                  <Route path="/pos" element={<POS />} />
-                  <Route path="/stock" element={<StockManagement />} />
-                  <Route path="/reports" element={<Reports />} />
-                  <Route path="/reset-password" element={<ResetPassword />} />
-                  <Route path="/settings" element={<Settings />} />
-                </Routes>
-              </DashboardLayout>
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
-    </AnimatePresence>
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route
+        path="/*"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <Routes>
+                <Route index element={<Dashboard />} />
+                <Route path="products" element={<Products />} />
+                <Route path="pos" element={<POS />} />
+                <Route path="stock" element={<StockManagement />} />
+                <Route path="reports" element={<Reports />} />
+                <Route path="reset-password" element={<ResetPassword />} />
+                <Route path="settings" element={<Settings />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
   );
 }
 

@@ -91,7 +91,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (username, firstName, lastName, contactNumber, email, password, profileImage) => {
+  const register = async (username, firstName, lastName, contactNumber, email, password, profileImage, shopName, fullAddress, pincode) => {
     setLoading(true);
     setError(null);
     
@@ -104,6 +104,9 @@ export const AuthProvider = ({ children }) => {
         contactNumber,
         email,
         password,
+        shopName: shopName || '',
+        fullAddress: fullAddress || '',
+        pincode: pincode || '',
       };
       
       // Only include profileImage if it's a valid non-empty string

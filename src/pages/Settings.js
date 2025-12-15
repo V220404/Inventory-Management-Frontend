@@ -23,6 +23,9 @@ import {
   Image as ImageIcon,
   Close as CloseIcon,
   Save as SaveIcon,
+  Store as StoreIcon,
+  LocationOn as LocationIcon,
+  Pin as PinIcon,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
@@ -38,6 +41,9 @@ export default function Settings() {
   const [email, setEmail] = useState(user?.email || '');
   const [profileImage, setProfileImage] = useState(user?.profileImage || null);
   const [profileImagePreview, setProfileImagePreview] = useState(user?.profileImage || null);
+  const [shopName, setShopName] = useState(user?.shopName || '');
+  const [fullAddress, setFullAddress] = useState(user?.fullAddress || '');
+  const [pincode, setPincode] = useState(user?.pincode || '');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
@@ -51,6 +57,9 @@ export default function Settings() {
       setEmail(user.email || '');
       setProfileImage(user.profileImage || null);
       setProfileImagePreview(user.profileImage || null);
+      setShopName(user.shopName || '');
+      setFullAddress(user.fullAddress || '');
+      setPincode(user.pincode || '');
     }
   }, [user]);
 
@@ -118,6 +127,9 @@ export default function Settings() {
       contactNumber,
       email,
       profileImage: profileImage || null, // Explicitly send null if image is removed
+      shopName,
+      fullAddress,
+      pincode,
     });
 
     if (successResult) {

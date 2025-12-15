@@ -28,6 +28,10 @@ import {
   TableHead,
   TableRow,
   Paper,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
+  FormControl,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -38,6 +42,8 @@ import {
   AttachMoney as MoneyIcon,
   Clear as ClearIcon,
   CameraAlt as CameraIcon,
+  Person as PersonIcon,
+  Phone as PhoneIcon,
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Html5Qrcode, Html5QrcodeScanType, Html5QrcodeSupportedFormats } from 'html5-qrcode';
@@ -51,6 +57,7 @@ import {
   checkoutBill,
 } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import BillPrint from '../components/BillPrint';
 
 export default function POS() {
   const { user } = useAuth();
@@ -62,6 +69,12 @@ export default function POS() {
   const [cameraScanning, setCameraScanning] = useState(false);
   const [isScanningPaused, setIsScanningPaused] = useState(false);
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
+  const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
+  const [customerName, setCustomerName] = useState('');
+  const [customerContact, setCustomerContact] = useState('');
+  const [paymentMode, setPaymentMode] = useState('Cash');
+  const [billPrintOpen, setBillPrintOpen] = useState(false);
+  const [completedBillData, setCompletedBillData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -303,6 +316,17 @@ export default function POS() {
       setError('Cart is empty!');
       return;
     }
+    // Open customer details dialog first
+    setCustomerDialogOpen(true);
+  };
+
+  const handleCustomerSubmit = () => {
+    if (!customerName.trim()) {
+      setError('Please enter customer name');
+      return;
+    }
+    // Close customer dialog and open checkout confirmation
+    setCustomerDialogOpen(false);
     setCheckoutDialogOpen(true);
   };
 
@@ -316,14 +340,37 @@ export default function POS() {
       const response = await checkoutBill(billId, user?.username);
       
       if (response.success) {
-        setSuccess(`Sale completed! Total: $${grandTotal.toFixed(2)}`);
+        // Store bill data for printing
+        setCompletedBillData({
+          store: {
+            name: user?.shopName || 'Store Name',
+            address: user?.fullAddress || 'Address',
+            contactNumber: user?.contactNumber || 'Contact Number',
+            pincode: user?.pincode || 'Pincode',
+          },
+          customer: {
+            name: customerName,
+            contactNumber: customerContact || '',
+          },
+          paymentMode: paymentMode,
+          products: billItems,
+          billId: billId,
+          grandTotal: grandTotal,
+        });
+
+        // Open bill print dialog
+        setBillPrintOpen(true);
         
         // Clear current bill items and total immediately
         setBillItems([]);
         setGrandTotal(0);
         
-        // Create new bill for next sale after showing success message
-        // Don't set billId to null - backend will create new bill since old one is completed
+        // Reset customer details
+        setCustomerName('');
+        setCustomerContact('');
+        setPaymentMode('Cash');
+        
+        // Create new bill for next sale after a delay
         setTimeout(async () => {
           setSuccess(''); // Clear success message
           setLoading(true); // Show loading while creating new bill
@@ -338,6 +385,11 @@ export default function POS() {
       setError(err.message || 'Failed to complete sale. Please try again.');
       setLoading(false);
     }
+  };
+
+  const handleBillPrintClose = () => {
+    setBillPrintOpen(false);
+    setCompletedBillData(null);
   };
 
   const startCameraScan = async () => {
@@ -906,6 +958,179 @@ export default function POS() {
             </Button>
           </DialogActions>
         </Dialog>
+
+        {/* Customer Details Dialog */}
+        <Dialog
+          open={customerDialogOpen}
+          onClose={() => {
+            setCustomerDialogOpen(false);
+            setCustomerName('');
+            setCustomerContact('');
+            setPaymentMode('Cash');
+          }}
+          maxWidth="sm"
+          fullWidth
+          PaperProps={{
+            sx: {
+              borderRadius: 3,
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            }
+          }}
+        >
+          <DialogTitle sx={{ textAlign: 'center', pt: 4, pb: 2 }}>
+            <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#1f2937' }}>
+              Customer Details
+            </Typography>
+          </DialogTitle>
+          <DialogContent sx={{ px: 4, pb: 3 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 2 }}>
+              <TextField
+                fullWidth
+                label="Customer Name"
+                variant="outlined"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                required
+                autoFocus
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <PersonIcon sx={{ color: 'gray' }} />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+              <TextField
+                fullWidth
+                label="Contact Number (Optional)"
+                variant="outlined"
+                value={customerContact}
+                onChange={(e) => setCustomerContact(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <PhoneIcon sx={{ color: 'gray' }} />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+              
+              <FormControl component="fieldset" sx={{ mt: 1 }}>
+                <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: '#374151' }}>
+                  Payment Mode
+                </Typography>
+                <RadioGroup
+                  row
+                  value={paymentMode}
+                  onChange={(e) => setPaymentMode(e.target.value)}
+                  sx={{ gap: 2 }}
+                >
+                  <FormControlLabel
+                    value="Cash"
+                    control={<Radio size="small" />}
+                    label="Cash"
+                    sx={{
+                      '& .MuiFormControlLabel-label': {
+                        fontSize: '0.9rem',
+                      },
+                    }}
+                  />
+                  <FormControlLabel
+                    value="Online"
+                    control={<Radio size="small" />}
+                    label="Online"
+                    sx={{
+                      '& .MuiFormControlLabel-label': {
+                        fontSize: '0.9rem',
+                      },
+                    }}
+                  />
+                </RadioGroup>
+              </FormControl>
+            </Box>
+          </DialogContent>
+          <DialogActions sx={{ p: 3, pt: 0, justifyContent: 'center', gap: 2 }}>
+            <Button 
+              onClick={() => {
+                setCustomerDialogOpen(false);
+                setCustomerName('');
+                setCustomerContact('');
+                setPaymentMode('Cash');
+              }} 
+              variant="outlined" 
+              size="large"
+              sx={{ minWidth: 120, textTransform: 'none' }}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleCustomerSubmit} 
+              variant="contained" 
+              size="large"
+              disabled={!customerName.trim()}
+              sx={{
+                minWidth: 120,
+                background: 'linear-gradient(to right, #22c55e, #16a34a)',
+                '&:hover': {
+                  background: 'linear-gradient(to right, #16a34a, #15803d)',
+                },
+                textTransform: 'none',
+              }}
+            >
+              Continue
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Bill Print Dialog */}
+        {completedBillData && (
+          <Dialog
+            open={billPrintOpen}
+            onClose={handleBillPrintClose}
+            maxWidth="md"
+            fullWidth
+            PaperProps={{
+              sx: {
+                borderRadius: 3,
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                '@media print': {
+                  boxShadow: 'none',
+                  margin: 0,
+                  maxWidth: '100%',
+                  borderRadius: 0,
+                },
+              }
+            }}
+            sx={{
+              '@media print': {
+                '& .MuiDialog-container': {
+                  alignItems: 'flex-start',
+                },
+                '& .MuiDialog-paper': {
+                  margin: 0,
+                  maxHeight: '100%',
+                },
+              }
+            }}
+          >
+            <Box sx={{ '@media print': { display: 'none' } }}>
+              <DialogTitle sx={{ pb: 1 }}>
+                <Typography variant="h6" fontWeight="bold">
+                  Bill Receipt
+                </Typography>
+              </DialogTitle>
+            </Box>
+            <DialogContent sx={{ p: 3, '@media print': { p: 2 } }}>
+              <BillPrint
+                store={completedBillData.store}
+                customer={completedBillData.customer}
+                products={completedBillData.products}
+                billId={completedBillData.billId}
+                onClose={handleBillPrintClose}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
       </motion.div>
     </Box>
   );

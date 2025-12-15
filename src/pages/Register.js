@@ -21,6 +21,9 @@ import {
   Phone as PhoneIcon,
   AccountCircle as AccountCircleIcon,
   PhotoCamera as PhotoCameraIcon,
+  Store as StoreIcon,
+  LocationOn as LocationIcon,
+  Pin as PinIcon,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
@@ -37,6 +40,9 @@ export default function Register() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
   const [profileImagePreview, setProfileImagePreview] = useState(null);
+  const [shopName, setShopName] = useState('');
+  const [fullAddress, setFullAddress] = useState('');
+  const [pincode, setPincode] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const navigate = useNavigate();
@@ -73,11 +79,11 @@ export default function Register() {
     setError('');
     setSuccess('');
     
-    // Validation
-    if (!username || !firstName || !lastName || !contactNumber || !email || !password || !confirmPassword) {
-      setError('Please fill in all fields');
-      return;
-    }
+            // Validation
+            if (!username || !firstName || !lastName || !contactNumber || !email || !password || !confirmPassword || !shopName || !fullAddress || !pincode) {
+              setError('Please fill in all fields');
+              return;
+            }
 
     if (username.length < 3) {
       setError('Username must be at least 3 characters long');
@@ -94,7 +100,7 @@ export default function Register() {
       return;
     }
 
-    const successResult = await register(username, firstName, lastName, contactNumber, email, password, profileImage);
+            const successResult = await register(username, firstName, lastName, contactNumber, email, password, profileImage, shopName, fullAddress, pincode);
     if (successResult) {
       setSuccess('Registration successful! Redirecting...');
       setTimeout(() => {
@@ -277,28 +283,96 @@ export default function Register() {
                 />
               </motion.div>
 
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.45 }}
-              >
-                <TextField
-                  fullWidth
-                  label="Email ID"
-                  type="email"
-                  variant="outlined"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  sx={{ marginBottom: '20px' }}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <EmailIcon sx={{ color: 'gray' }} />
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              </motion.div>
+                      <motion.div
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.45 }}
+                      >
+                        <TextField
+                          fullWidth
+                          label="Email ID"
+                          type="email"
+                          variant="outlined"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          sx={{ marginBottom: '20px' }}
+                          InputProps={{
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <EmailIcon sx={{ color: 'gray' }} />
+                              </InputAdornment>
+                            ),
+                          }}
+                        />
+                      </motion.div>
+
+                      <motion.div
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.5 }}
+                      >
+                        <TextField
+                          fullWidth
+                          label="Shop Name"
+                          variant="outlined"
+                          value={shopName}
+                          onChange={(e) => setShopName(e.target.value)}
+                          sx={{ marginBottom: '20px' }}
+                          InputProps={{
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <StoreIcon sx={{ color: 'gray' }} />
+                              </InputAdornment>
+                            ),
+                          }}
+                        />
+                      </motion.div>
+
+                      <motion.div
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.55 }}
+                      >
+                        <TextField
+                          fullWidth
+                          label="Full Address"
+                          variant="outlined"
+                          multiline
+                          rows={3}
+                          value={fullAddress}
+                          onChange={(e) => setFullAddress(e.target.value)}
+                          sx={{ marginBottom: '20px' }}
+                          InputProps={{
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <LocationIcon sx={{ color: 'gray' }} />
+                              </InputAdornment>
+                            ),
+                          }}
+                        />
+                      </motion.div>
+
+                      <motion.div
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.6 }}
+                      >
+                        <TextField
+                          fullWidth
+                          label="Pincode"
+                          variant="outlined"
+                          value={pincode}
+                          onChange={(e) => setPincode(e.target.value)}
+                          sx={{ marginBottom: '20px' }}
+                          InputProps={{
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <PinIcon sx={{ color: 'gray' }} />
+                              </InputAdornment>
+                            ),
+                          }}
+                        />
+                      </motion.div>
 
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
