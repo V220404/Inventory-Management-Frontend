@@ -2,7 +2,7 @@
  * API utility to make authenticated requests
  * Automatically includes username in headers
  */
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 export const apiRequest = async (endpoint, options = {}) => {
   const user = JSON.parse(localStorage.getItem('user') || 'null');
@@ -80,6 +80,14 @@ export const checkoutBill = async (billId, username) => {
 // Sales/Revenue related functions
 export const getRevenueStats = async (username) => {
   const response = await apiRequest('/sales/revenue');
+  return response.json();
+};
+
+export const getAllSales = async (page = 1, limit = 100, startDate = null, endDate = null) => {
+  let url = `/sales?page=${page}&limit=${limit}`;
+  if (startDate) url += `&startDate=${startDate}`;
+  if (endDate) url += `&endDate=${endDate}`;
+  const response = await apiRequest(url);
   return response.json();
 };
 

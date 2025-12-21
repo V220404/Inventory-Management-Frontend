@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 
 const AuthContext = createContext();
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -72,6 +72,13 @@ export const AuthProvider = ({ children }) => {
           return false;
         }
 
+        // Clear stale cached data from localStorage on fresh login
+        // This ensures fresh data is fetched from the database
+        // Note: Database data persists - this only clears the cache
+        localStorage.removeItem('products');
+        localStorage.removeItem('transactions');
+
+        // Save user authentication data
         setUser(userData);
         setIsAuthenticated(true);
         localStorage.setItem('isAuthenticated', 'true');
@@ -148,6 +155,13 @@ export const AuthProvider = ({ children }) => {
           profileImage: userData.profileImage ? `present (${userData.profileImage.substring(0, 50)}...)` : 'missing'
         });
         
+        // Clear stale cached data from localStorage on fresh registration
+        // This ensures fresh data is fetched from the database
+        // Note: Database data persists - this only clears the cache
+        localStorage.removeItem('products');
+        localStorage.removeItem('transactions');
+        
+        // Save user authentication data
         setUser(userData);
         setIsAuthenticated(true);
         localStorage.setItem('isAuthenticated', 'true');

@@ -10,6 +10,7 @@ import {
   ListItem,
   ListItemText,
   Divider,
+  CircularProgress,
 } from '@mui/material';
 import {
   Inventory as InventoryIcon,
@@ -19,6 +20,7 @@ import {
   CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
+import apiRequest, { getRevenueStats, getAllSales } from '../utils/api';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -51,50 +53,59 @@ export default function Dashboard() {
 
   const [recentTransactions, setRecentTransactions] = useState([]);
   const [lowStockAlerts, setLowStockAlerts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadData();
   }, []);
 
-  const loadData = () => {
-    const storedProducts = JSON.parse(localStorage.getItem('products') || '[]');
-    const storedTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
-    
-    // Calculate total stock
-    const totalStock = storedProducts.reduce((sum, p) => sum + (p.stock || 0), 0);
-    
-    // Calculate today's sales
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayTransactions = storedTransactions.filter(t => {
-      const transactionDate = new Date(t.date);
-      transactionDate.setHours(0, 0, 0, 0);
-      return transactionDate.getTime() === today.getTime();
-    });
-    const todaySales = todayTransactions.reduce((sum, t) => sum + (t.total || 0), 0);
-    
-    const lowStock = storedProducts.filter(p => (p.stock || 0) < 10);
-    
-    setStats({
-      totalProducts: storedProducts.length,
-      totalStock: totalStock,
-      todaySales: todaySales,
-      lowStockItems: lowStock.length,
-    });
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      // Fetch products
+      const productsResponse = await apiRequest('/products');
+      const productsData = await productsResponse.json();
+      const products = productsData.success ? (productsData.data?.products || productsData.data || []) : [];
 
-    setLowStockAlerts(lowStock.slice(0, 5));
-    
-    // Format recent transactions for display
-    const formattedTransactions = storedTransactions.slice(-10).reverse().flatMap(transaction => {
-      return transaction.items?.map(item => ({
-        ...item,
-        transactionId: transaction.id,
-        date: transaction.date,
-        transactionTotal: transaction.total,
-      })) || [];
-    });
-    
-    setRecentTransactions(formattedTransactions.slice(0, 10));
+      // Fetch revenue stats for today's sales
+      const revenueResponse = await getRevenueStats();
+      const todaySales = revenueResponse.success ? (revenueResponse.data?.dailyRevenue || 0) : 0;
+
+      // Fetch recent sales
+      const salesResponse = await getAllSales(1, 10);
+      const recentSales = salesResponse.success ? (salesResponse.data?.sales || []) : [];
+
+      // Calculate total stock
+      const totalStock = products.reduce((sum, p) => sum + (p.stock || 0), 0);
+      
+      // Find low stock items
+      const lowStock = products.filter(p => (p.stock || 0) < 10);
+      
+      setStats({
+        totalProducts: products.length,
+        totalStock: totalStock,
+        todaySales: todaySales,
+        lowStockItems: lowStock.length,
+      });
+
+      setLowStockAlerts(lowStock.slice(0, 5));
+      
+      // Format recent transactions for display
+      const formattedTransactions = recentSales.flatMap(sale => {
+        return sale.items?.map(item => ({
+          ...item,
+          transactionId: sale.id,
+          date: sale.date,
+          transactionTotal: sale.total,
+        })) || [];
+      });
+      
+      setRecentTransactions(formattedTransactions.slice(0, 10));
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Calculate trend percentages (mock data - replace with actual calculations)
@@ -148,6 +159,14 @@ export default function Dashboard() {
       hour12: false 
     });
   };
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box>

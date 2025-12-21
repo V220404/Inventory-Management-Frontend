@@ -10,6 +10,7 @@ import {
   FormControl,
   InputLabel,
   Paper,
+  CircularProgress,
 } from '@mui/material';
 import {
   TrendingUp as TrendingUpIcon,
@@ -18,6 +19,7 @@ import {
   Inventory as InventoryIcon,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
+import apiRequest, { getAllSales } from '../utils/api';
 import {
   LineChart,
   Line,
@@ -43,6 +45,7 @@ export default function Reports() {
   const [salesData, setSalesData] = useState([]);
   const [topProducts, setTopProducts] = useState([]);
   const [revenueData, setRevenueData] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadData();
@@ -52,11 +55,33 @@ export default function Reports() {
     processData();
   }, [transactions, products, timeRange]);
 
-  const loadData = () => {
-    const storedTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
-    const storedProducts = JSON.parse(localStorage.getItem('products') || '[]');
-    setTransactions(storedTransactions);
-    setProducts(storedProducts);
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      // Fetch all sales
+      const salesResponse = await getAllSales(1, 1000);
+      const sales = salesResponse.success ? (salesResponse.data?.sales || []) : [];
+
+      // Fetch products
+      const productsResponse = await apiRequest('/products');
+      const productsData = await productsResponse.json();
+      const productsList = productsData.success ? (productsData.data?.products || productsData.data || []) : [];
+
+      // Format sales to match transaction format expected by processData
+      const formattedTransactions = sales.map(sale => ({
+        id: sale.id,
+        date: sale.date,
+        total: sale.total,
+        items: sale.items || [],
+      }));
+
+      setTransactions(formattedTransactions);
+      setProducts(productsList);
+    } catch (error) {
+      console.error('Error loading reports data:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const processData = () => {
@@ -154,6 +179,14 @@ export default function Reports() {
     name: product.name,
     value: product.quantity,
   }));
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box>

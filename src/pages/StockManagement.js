@@ -20,6 +20,8 @@ import {
   Grid,
   InputAdornment,
   IconButton,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -30,6 +32,7 @@ import {
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
+import apiRequest from '../utils/api';
 
 export default function StockManagement() {
   const [products, setProducts] = useState([]);
@@ -39,6 +42,9 @@ export default function StockManagement() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [adjustmentAmount, setAdjustmentAmount] = useState(0);
   const [adjustmentType, setAdjustmentType] = useState('add');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   useEffect(() => {
     loadProducts();
@@ -48,14 +54,24 @@ export default function StockManagement() {
     filterProducts();
   }, [searchTerm, products]);
 
-  const loadProducts = () => {
-    const stored = JSON.parse(localStorage.getItem('products') || '[]');
-    setProducts(stored);
-  };
+  const loadProducts = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await apiRequest('/products');
+      const data = await response.json();
 
-  const saveProducts = (newProducts) => {
-    localStorage.setItem('products', JSON.stringify(newProducts));
-    setProducts(newProducts);
+      if (data.success) {
+        setProducts(data.data?.products || data.data || []);
+      } else {
+        setError(data.message || 'Failed to load products');
+      }
+    } catch (err) {
+      console.error('Load products error:', err);
+      setError('Failed to load products. Please check if the server is running.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const filterProducts = () => {
@@ -88,34 +104,53 @@ export default function StockManagement() {
     setAdjustmentAmount(0);
   };
 
-  const handleAdjustStock = () => {
+  const handleAdjustStock = async () => {
     if (!selectedProduct || adjustmentAmount <= 0) {
-      alert('Please enter a valid adjustment amount');
+      setError('Please enter a valid adjustment amount');
       return;
     }
 
-    const updatedProducts = products.map((product) => {
-      if (product.id === selectedProduct.id) {
-        const newStock =
-          adjustmentType === 'add'
-            ? product.stock + parseInt(adjustmentAmount)
-            : product.stock - parseInt(adjustmentAmount);
+    const newStock =
+      adjustmentType === 'add'
+        ? selectedProduct.stock + parseInt(adjustmentAmount)
+        : selectedProduct.stock - parseInt(adjustmentAmount);
 
-        if (newStock < 0) {
-          alert('Stock cannot be negative!');
-          return product;
-        }
+    if (newStock < 0) {
+      setError('Stock cannot be negative!');
+      return;
+    }
 
-        return {
-          ...product,
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await apiRequest(`/products/${selectedProduct.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          name: selectedProduct.name,
+          category: selectedProduct.category,
+          price: selectedProduct.price,
           stock: newStock,
-        };
-      }
-      return product;
-    });
+        }),
+      });
 
-    saveProducts(updatedProducts);
-    handleCloseAdjustDialog();
+      const data = await response.json();
+
+      if (data.success) {
+        setSuccess('Stock updated successfully!');
+        await loadProducts();
+        handleCloseAdjustDialog();
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        setError(data.message || 'Failed to update stock');
+      }
+    } catch (err) {
+      console.error('Update stock error:', err);
+      setError('Failed to update stock. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getLowStockItems = () => {
@@ -144,11 +179,30 @@ export default function StockManagement() {
             variant="outlined"
             startIcon={<RefreshIcon />}
             onClick={loadProducts}
+            disabled={loading}
           >
             Refresh
           </Button>
         </Box>
 
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
+            {error}
+          </Alert>
+        )}
+
+        {success && (
+          <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>
+            {success}
+          </Alert>
+        )}
+
+        {loading && products.length === 0 ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <>
         <Grid container spacing={3} className="mb-6">
           <Grid item xs={12} md={4}>
             <motion.div whileHover={{ scale: 1.05 }}>
@@ -368,6 +422,8 @@ export default function StockManagement() {
             </Button>
           </DialogActions>
         </Dialog>
+        </>
+        )}
       </motion.div>
     </Box>
   );
