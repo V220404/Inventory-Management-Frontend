@@ -37,6 +37,7 @@ import {
 import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { getRevenueStats } from '../../utils/api';
+import { formatCurrency, formatCurrencyWhole } from '../../utils/currency';
 
 const DRAWER_WIDTH = 280;
 
@@ -83,7 +84,7 @@ const RevenueDisplay = React.memo(({ dailyRevenue, monthlyRevenue, isSmallScreen
   const dailyChip = (
     <Chip
       icon={<TodayIcon sx={{ color: '#22c55e !important', fontSize: 16 }} />}
-      label={`$${dailyRevenue.toFixed(0)}`}
+      label={formatCurrencyWhole(dailyRevenue)}
       size="small"
       sx={{
         backgroundColor: 'rgba(34, 197, 94, 0.1)',
@@ -99,7 +100,7 @@ const RevenueDisplay = React.memo(({ dailyRevenue, monthlyRevenue, isSmallScreen
   const monthlyChip = (
     <Chip
       icon={<CalendarMonthIcon sx={{ color: '#3b82f6 !important', fontSize: 16 }} />}
-      label={`$${monthlyRevenue.toFixed(0)}`}
+      label={formatCurrencyWhole(monthlyRevenue)}
       size="small"
       sx={{
         backgroundColor: 'rgba(59, 130, 246, 0.1)',
@@ -141,7 +142,7 @@ const RevenueDisplay = React.memo(({ dailyRevenue, monthlyRevenue, isSmallScreen
             Daily
           </Typography>
           <Typography variant="body2" sx={{ color: '#15803d', fontSize: '0.875rem', fontWeight: 700, lineHeight: 1.2 }}>
-            ${dailyRevenue.toFixed(2)}
+            {formatCurrency(dailyRevenue)}
           </Typography>
         </Box>
       </Box>
@@ -164,7 +165,7 @@ const RevenueDisplay = React.memo(({ dailyRevenue, monthlyRevenue, isSmallScreen
             Monthly
           </Typography>
           <Typography variant="body2" sx={{ color: '#1d4ed8', fontSize: '0.875rem', fontWeight: 700, lineHeight: 1.2 }}>
-            ${monthlyRevenue.toFixed(2)}
+            {formatCurrency(monthlyRevenue)}
           </Typography>
         </Box>
       </Box>

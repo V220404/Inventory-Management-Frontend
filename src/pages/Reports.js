@@ -20,6 +20,7 @@ import {
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import apiRequest, { getAllSales } from '../utils/api';
+import { formatCurrency } from '../utils/currency';
 import {
   LineChart,
   Line,
@@ -225,7 +226,7 @@ export default function Reports() {
                         Total Revenue
                       </Typography>
                       <Typography variant="h5" className="font-bold text-green-600">
-                        ${totalRevenue.toFixed(2)}
+                        {formatCurrency(totalRevenue)}
                       </Typography>
                     </Box>
                     <MoneyIcon className="text-4xl text-green-500" />
@@ -282,7 +283,7 @@ export default function Reports() {
                         Avg. Transaction
                       </Typography>
                       <Typography variant="h5" className="font-bold text-orange-600">
-                        ${averageTransactionValue.toFixed(2)}
+                        {formatCurrency(averageTransactionValue)}
                       </Typography>
                     </Box>
                     <TrendingUpIcon className="text-4xl text-orange-500" />
@@ -401,8 +402,7 @@ export default function Reports() {
                                 {index + 1}. {product.name}
                               </Typography>
                               <Typography variant="body2" className="text-gray-600">
-                                Quantity: {product.quantity} • Revenue: $
-                                {product.revenue.toFixed(2)}
+                                Quantity: {product.quantity} • Revenue: {formatCurrency(product.revenue)}
                               </Typography>
                             </Box>
                           </Box>

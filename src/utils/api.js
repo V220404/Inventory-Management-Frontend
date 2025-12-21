@@ -91,5 +91,31 @@ export const getAllSales = async (page = 1, limit = 100, startDate = null, endDa
   return response.json();
 };
 
+// Business Intelligence (BI) related functions
+export const getSalesTrends = async (period = 30) => {
+  const response = await apiRequest(`/bi/sales-trends?period=${period}`);
+  return response.json();
+};
+
+export const getProductPerformance = async (limit = 10) => {
+  const response = await apiRequest(`/bi/product-performance?limit=${limit}`);
+  return response.json();
+};
+
+export const getProfitLoss = async (period = 30) => {
+  const response = await apiRequest(`/bi/profit-loss?period=${period}`);
+  return response.json();
+};
+
+export const getForecast = async () => {
+  const response = await apiRequest('/bi/forecast');
+  return response.json();
+};
+
+export const getLowStockAlerts = async (threshold = 10) => {
+  const response = await apiRequest(`/bi/low-stock?threshold=${threshold}`);
+  return response.json();
+};
+
 export default apiRequest;
 

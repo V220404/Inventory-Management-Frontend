@@ -47,6 +47,7 @@ import {
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Html5Qrcode, Html5QrcodeScanType, Html5QrcodeSupportedFormats } from 'html5-qrcode';
+import { formatCurrency } from '../utils/currency';
 import {
   getProductByBarcode,
   createBill,
@@ -674,12 +675,12 @@ export default function POS() {
                                 </TableCell>
                                 <TableCell align="right">
                                   <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                                    ${item.price.toFixed(2)}
+                                    {formatCurrency(item.price)}
                                   </Typography>
                                 </TableCell>
                                 <TableCell align="right">
                                   <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                                    ${item.total.toFixed(2)}
+                                    {formatCurrency(item.total)}
                                   </Typography>
                                 </TableCell>
                                 <TableCell align="center">
@@ -727,7 +728,7 @@ export default function POS() {
                         Subtotal:
                       </Typography>
                       <Typography variant="body2">
-                        ${grandTotal.toFixed(2)}
+                        {formatCurrency(grandTotal)}
                       </Typography>
                     </Box>
                     <Divider />
@@ -736,7 +737,7 @@ export default function POS() {
                         Total:
                       </Typography>
                       <Typography variant="h5" className="font-bold text-blue-600">
-                        ${grandTotal.toFixed(2)}
+                        {formatCurrency(grandTotal)}
                       </Typography>
                     </Box>
                   </Box>
@@ -903,7 +904,7 @@ export default function POS() {
                     Subtotal:
                   </Typography>
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    ${grandTotal.toFixed(2)}
+                    {formatCurrency(grandTotal)}
                   </Typography>
                 </Box>
                 <Divider sx={{ my: 1.5 }} />
@@ -912,7 +913,7 @@ export default function POS() {
                     Total:
                   </Typography>
                   <Typography variant="h6" sx={{ fontWeight: 700, color: '#22c55e' }}>
-                    ${grandTotal.toFixed(2)}
+                    {formatCurrency(grandTotal)}
                   </Typography>
                 </Box>
               </Box>

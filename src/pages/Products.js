@@ -35,6 +35,7 @@ import {
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import apiRequest from '../utils/api';
+import { formatCurrency, getCurrencySymbol } from '../utils/currency';
 
 export default function Products() {
   const theme = useTheme();
@@ -361,7 +362,7 @@ export default function Products() {
                         <TableCell>
                           <Chip label={product.category || 'N/A'} size="small" />
                         </TableCell>
-                        <TableCell>${product.price?.toFixed(2)}</TableCell>
+                        <TableCell>{formatCurrency(product.price)}</TableCell>
                         <TableCell>
                           <Chip
                             label={product.stock}
@@ -517,7 +518,7 @@ export default function Products() {
                   value={formData.price}
                   onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                   InputProps={{
-                    startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                    startAdornment: <InputAdornment position="start">{getCurrencySymbol()}</InputAdornment>,
                   }}
                 />
               </Grid>
