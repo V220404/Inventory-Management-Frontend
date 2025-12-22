@@ -229,7 +229,7 @@ export default function Reports() {
                         {formatCurrency(totalRevenue)}
                       </Typography>
                     </Box>
-                    <MoneyIcon className="text-4xl text-green-500" />
+                    {/* <MoneyIcon className="text-4xl text-green-500" /> */}
                   </Box>
                 </CardContent>
               </Card>
