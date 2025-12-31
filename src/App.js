@@ -42,7 +42,7 @@ const ProtectedRoute = ({ children }) => {
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Home />} />
+      <Route path="/" element={<Home />} initial />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route

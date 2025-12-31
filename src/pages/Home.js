@@ -64,6 +64,7 @@ export default function Home() {
       description: 'Work seamlessly with your team in real-time. Share, comment, and collaborate on projects effortlessly.',
     },
     {
+
       icon: <AnalyticsIcon />,
       title: 'Advanced Analytics',
       description: 'Get insights into your productivity with detailed analytics. Track progress and make data-driven decisions.',
@@ -625,7 +626,8 @@ export default function Home() {
             }}
           >
             <Typography variant="body2">
-              &copy; 2024 InventoryPro. All rights reserved.
+              &copy; 2025 InventoryPro. All rights reserved.
+
             </Typography>
           </Box>
         </Container>
@@ -633,4 +635,6 @@ export default function Home() {
     </Box>
   );
 }
+
+
 
