@@ -40,3 +40,6 @@ export const getCurrencySymbol = () => '₹';
 
 export default formatCurrency;
 
+
+
+

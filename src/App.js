@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
 import { AnimatePresence } from 'framer-motion';
+import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ResetPassword from './pages/ResetPassword';
@@ -41,10 +42,11 @@ const ProtectedRoute = ({ children }) => {
 function AppRoutes() {
   return (
     <Routes>
+      <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route
-        path="/*"
+        path="/dashboard/*"
         element={
           <ProtectedRoute>
             <DashboardLayout>
@@ -56,12 +58,19 @@ function AppRoutes() {
                 <Route path="reports" element={<Reports />} />
                 <Route path="reset-password" element={<ResetPassword />} />
                 <Route path="settings" element={<Settings />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
+                <Route path="*" element={<Navigate to="/dashboard" replace />} />
               </Routes>
             </DashboardLayout>
           </ProtectedRoute>
         }
       />
+      {/* Redirect old routes to dashboard */}
+      <Route path="/products" element={<Navigate to="/dashboard/products" replace />} />
+      <Route path="/pos" element={<Navigate to="/dashboard/pos" replace />} />
+      <Route path="/stock" element={<Navigate to="/dashboard/stock" replace />} />
+      <Route path="/reports" element={<Navigate to="/dashboard/reports" replace />} />
+      <Route path="/settings" element={<Navigate to="/dashboard/settings" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

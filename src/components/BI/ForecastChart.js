@@ -6,6 +6,7 @@ import {
   Box,
   CircularProgress,
   Chip,
+  Alert,
 } from '@mui/material';
 import {
   LineChart,
@@ -24,6 +25,7 @@ import { getForecast } from '../../utils/api';
 const ForecastChart = memo(function ForecastChart() {
   const [forecasts, setForecasts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -31,13 +33,22 @@ const ForecastChart = memo(function ForecastChart() {
 
   const loadData = async () => {
     setLoading(true);
+    setError(null);
     try {
       const response = await getForecast();
-      if (response.success) {
-        setForecasts(response.data.forecasts || []);
+      if (response && response.success) {
+        setForecasts(response.data?.forecasts || []);
+      } else {
+        const errorMsg = response?.message || 'Failed to load forecast data';
+        if (errorMsg.includes('Route not found')) {
+          setError('BI endpoint not available. Please check backend deployment.');
+        } else {
+          setError(errorMsg);
+        }
       }
     } catch (error) {
       console.error('Error loading forecast data:', error);
+      setError('Failed to load forecast data. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -105,13 +116,19 @@ const ForecastChart = memo(function ForecastChart() {
             </Box>
           </Box>
 
-          {forecasts.length === 0 ? (
+          {error ? (
+            <Alert severity="error" className="mb-3">
+              {error}
+            </Alert>
+          ) : null}
+
+          {forecasts.length === 0 && !loading ? (
             <Box textAlign="center" py={4}>
               <Typography variant="body2" className="text-gray-500">
-                No forecast data available
+                No forecast data available. Need at least 30 days of sales history.
               </Typography>
             </Box>
-          ) : (
+          ) : forecasts.length > 0 ? (
             <>
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={combinedData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
@@ -180,7 +197,7 @@ const ForecastChart = memo(function ForecastChart() {
                 </Box>
               </Box>
             </>
-          )}
+          ) : null}
         </CardContent>
       </Card>
     </motion.div>

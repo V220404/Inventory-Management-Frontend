@@ -16,6 +16,7 @@ import {
   TableHead,
   TableRow,
   Paper,
+  Alert,
 } from '@mui/material';
 import {
   BarChart,
@@ -35,6 +36,7 @@ import { formatCurrency } from '../../utils/currency';
 const ProfitLossChart = memo(function ProfitLossChart() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [period, setPeriod] = useState(30);
   const [totalRevenue, setTotalRevenue] = useState(0);
 
@@ -44,15 +46,24 @@ const ProfitLossChart = memo(function ProfitLossChart() {
 
   const loadData = async () => {
     setLoading(true);
+    setError(null);
     try {
       const response = await getProfitLoss(period);
-      if (response.success) {
-        const products = response.data.products || [];
+      if (response && response.success) {
+        const products = response.data?.products || [];
         setData(products.slice(0, 10)); // Top 10 products
-        setTotalRevenue(response.data.totalRevenue || 0);
+        setTotalRevenue(response.data?.totalRevenue || 0);
+      } else {
+        const errorMsg = response?.message || 'Failed to load revenue data';
+        if (errorMsg.includes('Route not found')) {
+          setError('BI endpoint not available. Please check backend deployment.');
+        } else {
+          setError(errorMsg);
+        }
       }
     } catch (error) {
       console.error('Error loading profit & loss data:', error);
+      setError('Failed to load revenue data. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -117,13 +128,19 @@ const ProfitLossChart = memo(function ProfitLossChart() {
             </Typography>
           </Box>
 
-          {data.length === 0 ? (
+          {error ? (
+            <Alert severity="error" className="mb-3">
+              {error}
+            </Alert>
+          ) : null}
+
+          {data.length === 0 && !loading ? (
             <Box textAlign="center" py={4}>
               <Typography variant="body2" className="text-gray-500">
-                No revenue data available
+                No revenue data available for the selected period
               </Typography>
             </Box>
-          ) : (
+          ) : data.length > 0 ? (
             <>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart
@@ -191,7 +208,7 @@ const ProfitLossChart = memo(function ProfitLossChart() {
                 </Table>
               </TableContainer>
             </>
-          )}
+          ) : null}
         </CardContent>
       </Card>
     </motion.div>

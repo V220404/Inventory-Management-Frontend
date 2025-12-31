@@ -93,28 +93,88 @@ export const getAllSales = async (page = 1, limit = 100, startDate = null, endDa
 
 // Business Intelligence (BI) related functions
 export const getSalesTrends = async (period = 30) => {
-  const response = await apiRequest(`/bi/sales-trends?period=${period}`);
-  return response.json();
+  try {
+    const response = await apiRequest(`/bi/sales-trends?period=${period}`);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ 
+        success: false, 
+        message: `Server error: ${response.status}` 
+      }));
+      return errorData;
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching sales trends:', error);
+    return { success: false, message: 'Failed to fetch sales trends' };
+  }
 };
 
 export const getProductPerformance = async (limit = 10) => {
-  const response = await apiRequest(`/bi/product-performance?limit=${limit}`);
-  return response.json();
+  try {
+    const response = await apiRequest(`/bi/product-performance?limit=${limit}`);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ 
+        success: false, 
+        message: `Server error: ${response.status}` 
+      }));
+      return errorData;
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching product performance:', error);
+    return { success: false, message: 'Failed to fetch product performance' };
+  }
 };
 
 export const getProfitLoss = async (period = 30) => {
-  const response = await apiRequest(`/bi/profit-loss?period=${period}`);
-  return response.json();
+  try {
+    const response = await apiRequest(`/bi/profit-loss?period=${period}`);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ 
+        success: false, 
+        message: `Server error: ${response.status}` 
+      }));
+      return errorData;
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching profit loss:', error);
+    return { success: false, message: 'Failed to fetch profit loss data' };
+  }
 };
 
 export const getForecast = async () => {
-  const response = await apiRequest('/bi/forecast');
-  return response.json();
+  try {
+    const response = await apiRequest('/bi/forecast');
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ 
+        success: false, 
+        message: `Server error: ${response.status}` 
+      }));
+      return errorData;
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching forecast:', error);
+    return { success: false, message: 'Failed to fetch forecast data' };
+  }
 };
 
 export const getLowStockAlerts = async (threshold = 10) => {
-  const response = await apiRequest(`/bi/low-stock?threshold=${threshold}`);
-  return response.json();
+  try {
+    const response = await apiRequest(`/bi/low-stock?threshold=${threshold}`);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ 
+        success: false, 
+        message: `Server error: ${response.status}` 
+      }));
+      return errorData;
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching low stock alerts:', error);
+    return { success: false, message: 'Failed to fetch low stock alerts' };
+  }
 };
 
 export default apiRequest;

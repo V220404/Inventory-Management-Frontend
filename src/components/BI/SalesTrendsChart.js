@@ -9,6 +9,7 @@ import {
   FormControl,
   InputLabel,
   CircularProgress,
+  Alert,
 } from '@mui/material';
 import {
   LineChart,
@@ -28,6 +29,7 @@ import { formatCurrency } from '../../utils/currency';
 const SalesTrendsChart = memo(function SalesTrendsChart() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [period, setPeriod] = useState(30);
   const [weeklyRevenue, setWeeklyRevenue] = useState(0);
   const [monthlyRevenue, setMonthlyRevenue] = useState(0);
@@ -38,15 +40,24 @@ const SalesTrendsChart = memo(function SalesTrendsChart() {
 
   const loadData = async () => {
     setLoading(true);
+    setError(null);
     try {
       const response = await getSalesTrends(period);
-      if (response.success) {
-        setData(response.data.daily || []);
-        setWeeklyRevenue(response.data.weeklyRevenue || 0);
-        setMonthlyRevenue(response.data.monthlyRevenue || 0);
+      if (response && response.success) {
+        setData(response.data?.daily || []);
+        setWeeklyRevenue(response.data?.weeklyRevenue || 0);
+        setMonthlyRevenue(response.data?.monthlyRevenue || 0);
+      } else {
+        const errorMsg = response?.message || 'Failed to load sales trends';
+        if (errorMsg.includes('Route not found')) {
+          setError('BI endpoint not available. Please check backend deployment.');
+        } else {
+          setError(errorMsg);
+        }
       }
     } catch (error) {
       console.error('Error loading sales trends:', error);
+      setError('Failed to load sales trends. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -127,8 +138,21 @@ const SalesTrendsChart = memo(function SalesTrendsChart() {
             </Box>
           </Box>
 
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+          {error ? (
+            <Alert severity="error" className="mb-3">
+              {error}
+            </Alert>
+          ) : null}
+
+          {data.length === 0 && !loading ? (
+            <Box textAlign="center" py={4}>
+              <Typography variant="body2" className="text-gray-500">
+                No sales data available for the selected period
+              </Typography>
+            </Box>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
               <XAxis
                 dataKey="date"
@@ -170,6 +194,7 @@ const SalesTrendsChart = memo(function SalesTrendsChart() {
               />
             </LineChart>
           </ResponsiveContainer>
+          )}
         </CardContent>
       </Card>
     </motion.div>

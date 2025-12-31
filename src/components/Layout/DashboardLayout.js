@@ -42,11 +42,11 @@ import { formatCurrency, formatCurrencyWhole } from '../../utils/currency';
 const DRAWER_WIDTH = 280;
 
 const MENU_ITEMS = [
-  { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
-  { text: 'Products', icon: <InventoryIcon />, path: '/products' },
-  { text: 'Point of Sale', icon: <ShoppingCartIcon />, path: '/pos' },
-  { text: 'Stock Management', icon: <StorageIcon />, path: '/stock' },
-  { text: 'Reports', icon: <ReportsIcon />, path: '/reports' },
+  { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
+  { text: 'Products', icon: <InventoryIcon />, path: '/dashboard/products' },
+  { text: 'Point of Sale', icon: <ShoppingCartIcon />, path: '/dashboard/pos' },
+  { text: 'Stock Management', icon: <StorageIcon />, path: '/dashboard/stock' },
+  { text: 'Reports', icon: <ReportsIcon />, path: '/dashboard/reports' },
 ];
 
 // Reusable User Avatar Component

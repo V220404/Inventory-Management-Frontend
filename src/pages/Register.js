@@ -104,7 +104,7 @@ export default function Register() {
     if (successResult) {
       setSuccess('Registration successful! Redirecting...');
       setTimeout(() => {
-        navigate('/');
+        navigate('/dashboard');
       }, 1500);
     } else {
       // Error message should be set by the register function in AuthContext

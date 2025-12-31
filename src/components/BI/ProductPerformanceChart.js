@@ -6,6 +6,7 @@ import {
   Box,
   CircularProgress,
   Chip,
+  Alert,
 } from '@mui/material';
 import {
   BarChart,
@@ -31,6 +32,7 @@ const ProductPerformanceChart = memo(function ProductPerformanceChart() {
   const [topProducts, setTopProducts] = useState([]);
   const [categoryData, setCategoryData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -38,14 +40,23 @@ const ProductPerformanceChart = memo(function ProductPerformanceChart() {
 
   const loadData = async () => {
     setLoading(true);
+    setError(null);
     try {
       const response = await getProductPerformance(10);
-      if (response.success) {
-        setTopProducts(response.data.topProducts || []);
-        setCategoryData(response.data.categoryPerformance || []);
+      if (response && response.success) {
+        setTopProducts(response.data?.topProducts || []);
+        setCategoryData(response.data?.categoryPerformance || []);
+      } else {
+        const errorMsg = response?.message || 'Failed to load product performance';
+        if (errorMsg.includes('Route not found')) {
+          setError('BI endpoint not available. Please check backend deployment.');
+        } else {
+          setError(errorMsg);
+        }
       }
     } catch (error) {
       console.error('Error loading product performance:', error);
+      setError('Failed to load product performance. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -85,13 +96,19 @@ const ProductPerformanceChart = memo(function ProductPerformanceChart() {
             </Box>
           </Box>
 
-          {topProducts.length === 0 ? (
+          {error ? (
+            <Alert severity="error" className="mb-3">
+              {error}
+            </Alert>
+          ) : null}
+
+          {topProducts.length === 0 && !loading ? (
             <Box textAlign="center" py={4}>
               <Typography variant="body2" className="text-gray-500">
-                No sales data available
+                No sales data available. Make some sales to see product performance.
               </Typography>
             </Box>
-          ) : (
+          ) : topProducts.length > 0 ? (
             <>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart
@@ -152,7 +169,7 @@ const ProductPerformanceChart = memo(function ProductPerformanceChart() {
                 </Box>
               </Box>
             </>
-          )}
+          ) : null}
         </CardContent>
       </Card>
     </motion.div>

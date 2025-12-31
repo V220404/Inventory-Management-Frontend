@@ -7,12 +7,16 @@ import {
   Typography,
   Chip,
   CircularProgress,
+  Alert,
+  Button,
+  IconButton,
 } from '@mui/material';
 import {
   Inventory as InventoryIcon,
   TrendingUp as TrendingUpIcon,
   AttachMoney as MoneyIcon,
   Warning as WarningIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import apiRequest, { getRevenueStats, getAllSales } from '../utils/api';
@@ -51,14 +55,17 @@ export default function Dashboard() {
     todaySales: 0,
     lowStockItems: 0,
   });
-  const [loading, setLoading] = useState(false); // Changed to false - show content immediately
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
-    // Don't block UI - load in background
+    setLoading(true);
+    setError(null);
     try {
       // Fetch in parallel for better performance
       const [productsResponse, revenueResponse] = await Promise.all([
@@ -66,30 +73,46 @@ export default function Dashboard() {
         getRevenueStats(),
       ]);
 
+      // Check if responses are ok
+      if (!productsResponse.ok) {
+        throw new Error('Failed to load products');
+      }
+      if (!revenueResponse || !revenueResponse.success) {
+        console.warn('Revenue stats may not be available');
+      }
+
       const productsData = await productsResponse.json();
       const products = productsData.success
         ? productsData.data?.products || productsData.data || []
         : [];
 
-      const todaySales = revenueResponse.success
+      const todaySales = revenueResponse?.success
         ? revenueResponse.data?.dailyRevenue || 0
         : 0;
 
       // Calculate total stock
-      const totalStock = products.reduce((sum, p) => sum + (p.stock || 0), 0);
+      const totalStock = products.reduce((sum, p) => sum + (parseInt(p.stock) || 0), 0);
 
-      // Find low stock items
-      const lowStock = products.filter((p) => (p.stock || 0) < 10);
+      // Find low stock items (threshold: 10)
+      const lowStock = products.filter((p) => (parseInt(p.stock) || 0) < 10);
 
       setStats({
         totalProducts: products.length,
         totalStock: totalStock,
-        todaySales: todaySales,
+        todaySales: todaySales || 0,
         lowStockItems: lowStock.length,
       });
+      setDataLoaded(true);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
+      setError(error.message || 'Failed to load dashboard data. Please try again.');
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const handleRefresh = () => {
+    loadData();
   };
 
   const statCards = [
@@ -127,14 +150,34 @@ export default function Dashboard() {
     <Box className="p-6">
       <motion.div variants={containerVariants} initial="hidden" animate="visible">
         {/* Header Section */}
-        <Box className="mb-6">
-          <Typography variant="h4" className="font-bold mb-2 text-gray-800">
-            Business Intelligence Dashboard
-          </Typography>
-          <Typography variant="body1" className="text-gray-600">
-            Comprehensive insights into your inventory, sales, and business performance
-          </Typography>
+        <Box className="mb-6" display="flex" justifyContent="space-between" alignItems="flex-start">
+          <Box>
+            <Typography variant="h4" className="font-bold mb-2 text-gray-800">
+              Business Intelligence Dashboard
+            </Typography>
+            <Typography variant="body1" className="text-gray-600">
+              Comprehensive insights into your inventory, sales, and business performance
+            </Typography>
+          </Box>
+          <IconButton
+            onClick={handleRefresh}
+            disabled={loading}
+            className="bg-blue-50 hover:bg-blue-100"
+            title="Refresh data"
+          >
+            <RefreshIcon className={loading ? 'animate-spin' : ''} />
+          </IconButton>
         </Box>
+
+        {/* Error Alert */}
+        {error && (
+          <Alert severity="error" className="mb-4" onClose={() => setError(null)}>
+            {error}
+            <Button size="small" onClick={handleRefresh} sx={{ ml: 2 }}>
+              Retry
+            </Button>
+          </Alert>
+        )}
 
         {/* Key Metrics Cards */}
         <Grid container spacing={3} className="mb-6">
@@ -155,7 +198,7 @@ export default function Dashboard() {
                     <Typography variant="body2" className="text-gray-600 mb-1">
                       {card.title}
                     </Typography>
-                    {loading && stats.totalProducts === 0 ? (
+                    {loading && !dataLoaded ? (
                       <Box display="flex" alignItems="center" gap={1}>
                         <CircularProgress size={20} />
                         <Typography variant="h5" className="font-bold text-gray-400">
@@ -175,38 +218,70 @@ export default function Dashboard() {
         </Grid>
 
         {/* Business Intelligence Charts Section */}
-        <Box className="mb-6">
-          <Typography variant="h5" className="font-bold mb-4 text-gray-800">
-            Analytics & Insights
-          </Typography>
+        {dataLoaded && (
+          <Box className="mb-6">
+            <Typography variant="h5" className="font-bold mb-4 text-gray-800">
+              Analytics & Insights
+            </Typography>
 
-          {/* Sales Trends and Product Performance Row */}
-          <Grid container spacing={3} className="mb-6">
-            <Grid item xs={12} lg={8}>
-              <SalesTrendsChart />
-            </Grid>
-            <Grid item xs={12} lg={4}>
-              <LowStockAlerts />
-            </Grid>
-          </Grid>
+            {/* Show message if no data available */}
+            {stats.totalProducts === 0 && stats.todaySales === 0 ? (
+              <Alert severity="info" className="mb-4">
+                <Typography variant="body1" className="mb-2">
+                  <strong>Getting Started:</strong>
+                </Typography>
+                <Typography variant="body2">
+                  • Add products in the <strong>Products</strong> page to see inventory metrics
+                  <br />
+                  • Make sales in the <strong>Point of Sale</strong> page to see revenue analytics
+                  <br />
+                  • Charts and insights will appear as you add data
+                </Typography>
+              </Alert>
+            ) : (
+              <>
+                {/* Sales Trends and Product Performance Row */}
+                <Grid container spacing={3} className="mb-6">
+                  <Grid item xs={12} lg={8}>
+                    <SalesTrendsChart />
+                  </Grid>
+                  <Grid item xs={12} lg={4}>
+                    <LowStockAlerts />
+                  </Grid>
+                </Grid>
 
-          {/* Product Performance and Revenue Analysis Row */}
-          <Grid container spacing={3} className="mb-6">
-            <Grid item xs={12} lg={6}>
-              <ProductPerformanceChart />
-            </Grid>
-            <Grid item xs={12} lg={6}>
-              <ProfitLossChart />
-            </Grid>
-          </Grid>
+                {/* Product Performance and Revenue Analysis Row */}
+                <Grid container spacing={3} className="mb-6">
+                  <Grid item xs={12} lg={6}>
+                    <ProductPerformanceChart />
+                  </Grid>
+                  <Grid item xs={12} lg={6}>
+                    <ProfitLossChart />
+                  </Grid>
+                </Grid>
 
-          {/* Forecasting Row */}
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <ForecastChart />
-            </Grid>
-          </Grid>
-        </Box>
+                {/* Forecasting Row */}
+                <Grid container spacing={3}>
+                  <Grid item xs={12}>
+                    <ForecastChart />
+                  </Grid>
+                </Grid>
+              </>
+            )}
+          </Box>
+        )}
+
+        {/* Loading State for Charts */}
+        {loading && !dataLoaded && (
+          <Box display="flex" justifyContent="center" alignItems="center" minHeight={400}>
+            <Box textAlign="center">
+              <CircularProgress size={60} />
+              <Typography variant="h6" className="mt-4 text-gray-600">
+                Loading dashboard data...
+              </Typography>
+            </Box>
+          </Box>
+        )}
       </motion.div>
     </Box>
   );
